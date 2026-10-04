@@ -1,0 +1,15 @@
+search_api_sql_aggregator.settings:
+  path: '/admin/config/search/search-api/sql-aggregator'
+  defaults:
+    _form: '\Drupal\search_api_sql_aggregator\Form\SettingsForm'
+    _title: 'SQL Aggregator Settings'
+  requirements:
+    _permission: 'administer sql aggregator'
+
+search_api_sql_aggregator.keys:
+  path: '/admin/config/search/search-api/sql-aggregator/keys'
+  defaults:
+    _controller: '\Drupal\search_api_sql_aggregator\Controller\KeysController::build'
+    _title: 'Custom SQL settings.php keys'
+  requirements:
+    _permission: 'administer sql aggregator'

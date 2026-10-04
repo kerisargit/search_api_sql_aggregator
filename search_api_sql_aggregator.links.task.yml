@@ -1,0 +1,11 @@
+search_api_sql_aggregator.settings_tab:
+  title: 'Settings'
+  route_name: search_api_sql_aggregator.settings
+  base_route: search_api_sql_aggregator.settings
+  weight: 0
+
+search_api_sql_aggregator.keys_tab:
+  title: 'settings.php keys'
+  route_name: search_api_sql_aggregator.keys
+  base_route: search_api_sql_aggregator.settings
+  weight: 10

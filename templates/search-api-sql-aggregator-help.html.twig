@@ -1,0 +1,115 @@
+{#
+  Variables:
+    settings_url — URL string of the module settings form.
+#}
+<h2>{{ 'About'|trans }}</h2>
+<p>{{ 'Search API SQL Aggregator runs configurable SQL operations directly against Search API Database backend tables. Five operation types can be freely combined to maintain aggregated data for high-performance faceted search — without rebuilding the full Search API index.'|trans }}</p>
+<p><a href="{{ settings_url }}">{{ 'Settings page'|trans }}</a></p>
+
+<h2>{{ 'Security model'|trans }}</h2>
+<p>{{ 'Every write passes through four independent layers of defence:'|trans }}</p>
+<ol>
+  <li>{{ '<strong>Syntax</strong> — table and column names may only contain lowercase letters, digits, and underscores.'|trans }}</li>
+  <li>{{ '<strong>Prefix</strong> — all table names MUST start with <code>search_api_db_</code>. There is no override.'|trans }}</li>
+  <li>{{ '<strong>Existence</strong> — the table must exist in the database at run time.'|trans }}</li>
+  <li>{{ '<strong>Whitelist</strong> — tables are cross-referenced against registered Search API indexes.'|trans }}</li>
+</ol>
+<p>{{ 'Additionally, core Search API tracking columns (<code>item_id</code>, <code>search_api_id</code>, <code>search_api_datasource</code>, <code>search_api_language</code>, <code>search_api_relevance</code>, <code>search_api_random</code>) can never be used as write targets.'|trans }}</p>
+<p>{{ 'Aggregate functions for fill-from-union are validated against a hard allowlist (MIN, MAX, SUM, COUNT, AVG). No SQL injection is possible via configuration.'|trans }}</p>
+<p>{{ 'The whitelist (layer 4) is a <strong>hard block</strong>: a table that has the correct prefix but is not registered to any Search API index is refused as a write target — including for Custom SQL, whose single write target (if it has one) goes through this same check. Custom SQL still differs in one way: what it only reads from (JOIN, subqueries, WHERE) is not checked against these four layers at all.'|trans }}</p>
+
+<h2>{{ 'Permissions'|trans }}</h2>
+<p>{{ 'Three dedicated permissions gate this module. None is granted to any role by default:'|trans }}</p>
+<ul>
+  <li>{{ '<strong>Administer SQL Aggregator</strong> — required to open this settings page, build configurations, and run the five safe operation types.'|trans }}</li>
+  <li>{{ '<strong>SQL Aggregator: Custom SQL</strong> — additionally required to create, import, or run Custom SQL operations. By itself this permission is NOT enough to run anything — deny-by-default plus its own pair of settings.php keys are also required, see the dedicated "Custom SQL" section below. Grant only to fully trusted administrators: reads are unrestricted (equivalent to raw database access for SELECT-like statements), and while writes are checked against the Search API table whitelist, that check is a mistake guardrail, not a hardened boundary against a determined holder of this permission.'|trans }}</li>
+  <li>{{ '<strong>SQL Aggregator: Unsafe Custom SQL</strong> — additionally required to create, import, or run Unsafe Custom SQL operations (no table/command restriction at all). By itself this permission is NOT enough to run anything — see the dedicated "Unsafe Custom SQL" section below for the two settings.php values also required, AND the dependent "Unsafe Custom SQL" submodule (<code>search_api_sql_aggregator_unsafe</code>), which must be installed as well. Grant to as few accounts as possible, ideally none.'|trans }}</li>
+</ul>
+<p>{{ 'Note: user 1 and any role flagged as an administrator role bypass the permission system — and on some sites every administrator role is granted every permission automatically regardless of that flag. Custom SQL and Unsafe Custom SQL are both off by default (<code>$settings[\'search_api_sql_aggregator_allow_custom_sql\']</code> defaults to disallowed); leaving it unset in <code>settings.php</code> already locks both out for every account, including those.'|trans }}</p>
+<p>{{ 'Custom SQL content is additionally signed with an HMAC computed from the site\'s hash_salt (settings.php only — never stored in the database) whenever this form saves it. A configuration written by any other means, such as direct database access or configuration import, will not carry a valid signature, so its Custom SQL blocks are refused at run time — on cron, on request-triggered runs, and on manual runs — until re-saved here by a user holding the permission. Custom SQL and Unsafe Custom SQL each have their own independent signature, plus their own separate pair of settings.php keys — described below for each.'|trans }}</p>
+
+<h2>{{ 'Operation types'|trans }}</h2>
+
+<h3>{{ 'Aggregate'|trans }}</h3>
+<p>{{ 'Clears the target table (via DELETE, not TRUNCATE — TRUNCATE would silently commit and break the transaction on MySQL), then INSERTs de-duplicated rows from one or more source tables. Optionally updates a column in the main index table. Supports <em>hierarchy mode</em> which resolves one level of taxonomy parent.'|trans }}</p>
+<p>{{ '<em>Use case:</em> collapse multiple per-entity-bundle field tables into one aggregated lookup table, then propagate the value back to the main index.'|trans }}</p>
+
+<h3>{{ 'Copy'|trans }}</h3>
+<p>{{ 'Copies one column to another across any two Search API DB tables, joined on <code>item_id</code>. No rows are truncated.'|trans }}</p>
+<p>{{ '<em>Use case:</em> propagate a value from one index field column to another without rebuilding the index.'|trans }}</p>
+
+<h3>{{ 'Null Reset'|trans }}</h3>
+<p>{{ 'Sets a target column to NULL for all rows in a table.'|trans }}</p>
+<p>{{ '<em>Use case:</em> clear a derived field before re-populating it with subsequent Copy or Fill Union operations.'|trans }}</p>
+
+<h3>{{ 'Fill From Union'|trans }}</h3>
+<p>{{ 'Aggregates values from multiple source columns using MIN, MAX, SUM, COUNT, or AVG and writes the result into a single target column, joined on <code>item_id</code>.'|trans }}</p>
+<p>{{ '<em>Use case:</em> compute a rolled-up metric across several field tables and store it in the main index column.'|trans }}</p>
+
+<h2>{{ 'Configuration format'|trans }}</h2>
+<p>{{ 'Operations are configured via the visual builder and stored as a JSON array. Each object has a <code>type</code> discriminator field. Old-format blocks (<code>parent</code> + <code>children</code>) are automatically converted.'|trans }}</p>
+<pre><code>{% verbatim %}[
+  {"type":"aggregate","target_table":"search_api_db_idx_field_aggregated",
+   "source_tables":["search_api_db_idx_field"],
+   "options":{"hierarchy":false,"main_table":"search_api_db_idx"}},
+  {"type":"copy","source_table":"search_api_db_idx","source_column":"field_a",
+   "target_table":"search_api_db_idx","target_column":"field_b"},
+  {"type":"null_reset","target_table":"search_api_db_idx","target_column":"field_a"},
+  {"type":"fill_from_union","target_table":"search_api_db_idx","target_column":"field_c",
+   "sources":[{"table":"search_api_db_idx_x","column":"value"},
+               {"table":"search_api_db_idx_y","column":"value"}],
+   "aggregate_func":"MIN"}
+]{% endverbatim %}</code></pre>
+
+<h2>{{ 'Cron integration'|trans }}</h2>
+<p>{{ 'Enable <em>Run aggregation on Cron</em> on the settings page and choose a minimum interval between runs. A distributed lock prevents concurrent executions. The last-run report on the settings page shows per-operation timing and row counts.'|trans }}</p>
+<p>{{ 'Both time-based triggers — cron and <em>Also trigger on page requests</em> — are handled by the Interval Trigger module and share one schedule. Daily and weekly times use the site time zone; a run missed because nothing triggered Drupal at the scheduled time is caught up on the next cron run or visit.'|trans }}</p>
+<p>{{ '<em>Also trigger after Search API finishes indexing</em> runs aggregation right after a Search API index finishes a full indexing pass — a manual reindex catching up, or cron indexing emptying the queue — instead of on a time-based schedule. It ignores the schedule/interval by design (a finished reindex is treated as a deliberate signal, like the <em>Run Aggregation Now</em> button, not a passive timer), only fires for a batch of more than one item so routine single-item saves do not trigger it, and only for an index that at least one configured operation actually references.'|trans }}</p>
+
+<h3>{{ 'Priority Fill'|trans }}</h3>
+<p>{{ 'Updates a target column using COALESCE across multiple ordered source columns. The first non-NULL value wins, making source order the priority.'|trans }}</p>
+<p>{{ '<em>Use case:</em> fill a field from the most-specific source first (e.g. bundle-specific table) and fall back to a generic source when the specific one is NULL.'|trans }}</p>
+
+<h3>{{ 'Custom SQL'|trans }}</h3>
+<p><strong>{{ '⚠ DANGER: reads are unrestricted — a Custom SQL statement may JOIN, subquery, or filter against any table in the database. Only its single write target (if it has one) is checked against the Search API table whitelist; anything it only reads from is not verified. Misuse can still permanently destroy data within that scope.'|trans }}</strong></p>
+<p>{{ 'Custom SQL requires the dedicated <em>SQL Aggregator: Custom SQL</em> permission and can be disabled entirely via <code>$settings[\'search_api_sql_aggregator_allow_custom_sql\'] = FALSE;</code>. This switch is deny-by-default — a fresh site with nothing set in settings.php refuses Custom SQL outright, requiring an explicit <code>$settings[\'search_api_sql_aggregator_allow_custom_sql\'] = TRUE;</code> to opt in.'|trans }}</p>
+<p>{{ 'On top of the permission and the switch, Custom SQL also requires its own pair of settings.php keys (same model as Unsafe Custom SQL below, added for the same reason: a Drupal permission alone doesn\'t meaningfully gate who can introduce new SQL on a site where every administrator role has every permission) — kept as a SEPARATE key pair from Unsafe Custom SQL\'s, since the two categories already have independent permissions and signatures:'|trans }}</p>
+<ul>
+  <li>{{ '<code>$settings[\'search_api_sql_aggregator_custom_sql_create_key\']</code> — required only at the moment the set of Custom SQL blocks is actually changing. Meant to be temporary: add it, save the new/changed block once, remove it again.'|trans }}</li>
+  <li>{{ '<code>$settings[\'search_api_sql_aggregator_custom_sql_run_key\']</code> — required for any already-approved Custom SQL block to execute at all, on any trigger. Meant to stay in place for as long as the site wants Custom SQL to keep running.'|trans }}</li>
+</ul>
+<p>{{ 'The "settings.php keys" tab on this page shows the exact current value for both keys (only if you hold the Custom SQL permission), ready to copy — no drush needed. It also shows whether each is currently active. If you prefer drush:'|trans }}</p>
+<pre>drush php:eval "echo \Drupal\search_api_sql_aggregator\Service\AggregationManager::customSqlCreateKey();"
+drush php:eval "echo \Drupal\search_api_sql_aggregator\Service\AggregationManager::customSqlRunKey();"</pre>
+<p>{{ 'If the creation key is left in settings.php after it\'s no longer needed, the site status report (<code>/admin/reports/status</code>) will keep warning about it — it\'s meant to be removed once you\'re done authoring.'|trans }}</p>
+<p>{{ 'Executes a single SQL statement. Use Drupal\'s <code>{table}</code> notation for table-prefix support. Only single-statement SQL is supported per block; use multiple Custom SQL blocks for multiple statements (a statement containing an embedded <code>;</code> is refused).'|trans }}</p>
+<p>{{ 'Supported write forms — the table immediately named must be a Search API table: <code>INSERT INTO {table} ...</code>, <code>UPDATE {table} SET ...</code> (no JOIN or alias), <code>DELETE FROM {table} ...</code> (no JOIN or multi-table list), <code>REPLACE INTO {table} ...</code>, <code>TRUNCATE [TABLE] {table}</code>. Read-only statements (<code>SELECT</code>, <code>SHOW</code>, <code>EXPLAIN</code>, <code>DESCRIBE</code>) may reference any table, but may not contain <code>INTO</code> (blocks <code>SELECT ... INTO OUTFILE/DUMPFILE</code> and Postgres\'s <code>SELECT ... INTO table</code>, neither of which this check can verify). Statements starting with <code>WITH</code> (CTEs) and any command outside this list (DDL, <code>GRANT</code>, <code>CALL</code>, ...) are refused outright.'|trans }}</p>
+<p>{{ '<em>Use case:</em> a write to a Search API table sourced from an arbitrary table, e.g. <code>UPDATE {search_api_db_my_index} SET field_label = (SELECT name FROM taxonomy_term_field_data WHERE tid = field_tid)</code> — the read side is unrestricted, only the <code>UPDATE</code> target is checked.'|trans }}</p>
+<p>{{ 'This is a guardrail against a mistyped table name, not a hardened boundary: the permission itself is still equivalent to broad database trust, and SQL this check cannot confidently classify is refused rather than run unchecked — see the security contract note above.'|trans }}</p>
+<p>{{ 'All executions are logged to the Drupal watchdog with the full SQL text (truncated at 200 characters). The distributed lock still applies, so Custom SQL blocks are never run concurrently.'|trans }}</p>
+
+<h3>{{ 'Unsafe Custom SQL'|trans }}</h3>
+<p><strong>{{ '⚠⚠ DANGER: genuinely unrestricted — any table, any SQL command, exactly equivalent to a raw database connection. There is no write-target check of any kind.'|trans }}</strong></p>
+<p>{{ 'Unsafe Custom SQL lives in a separate, dependent submodule: <strong>Search API SQL Aggregator - Unsafe Custom SQL</strong> (<code>search_api_sql_aggregator_unsafe</code>). Uninstalling that submodule makes this capability structurally unavailable on a site — not merely permission-gated — regardless of any settings.php value or saved configuration. A site that never needs it should simply never install it. Everything below in this section only applies once the submodule IS installed; without it, any saved Unsafe Custom SQL block is refused outright with a "submodule not installed" message.'|trans }}</p>
+<p>{{ 'Exists for the SQL that ordinary Custom SQL refuses to classify — a JOIN in an UPDATE/DELETE, DDL (CREATE/ALTER/DROP), a CTE (WITH ...), and so on. Requires the dedicated <em>SQL Aggregator: Unsafe Custom SQL</em> permission AND the block\'s own explicit <code>confirmed: true</code> flag (the builder\'s checkbox) — but on a site where every administrator role is granted every permission automatically, neither of those meaningfully separates who can introduce it, which is why execution additionally requires two independent settings.php values that only someone with server/deploy access can compute and set:'|trans }}</p>
+<ul>
+  <li>{{ '<code>$settings[\'search_api_sql_aggregator_unsafe_custom_sql_create_key\']</code> — required only at the moment the set of Unsafe Custom SQL blocks is actually changing (a block added, edited, removed, or reordered). Meant to be temporary: add it, save the new/changed block once, remove it again. Saving unrelated settings, or re-saving unchanged Unsafe Custom SQL content, never requires it.'|trans }}</li>
+  <li>{{ '<code>$settings[\'search_api_sql_aggregator_unsafe_custom_sql_run_key\']</code> — required for any already-approved Unsafe Custom SQL block to execute at all, on any trigger (cron, request, index-complete, manual). Meant to stay in place for as long as the site wants that block to keep running; removing it halts all Unsafe Custom SQL execution immediately, with no change to configuration or State.'|trans }}</li>
+</ul>
+<p>{{ 'The "settings.php keys" tab on this page shows the exact current value for both keys (only if you hold the Unsafe Custom SQL permission AND the submodule is installed), ready to copy — no drush needed. It also shows whether each is currently active. If you prefer drush (submodule must be installed — this reaches its handler service, not a static method on the parent module\'s class):'|trans }}</p>
+<pre>drush php:eval "echo \Drupal::service('search_api_sql_aggregator_unsafe.handler')->createKey();"
+drush php:eval "echo \Drupal::service('search_api_sql_aggregator_unsafe.handler')->runKey();"</pre>
+<p>{{ 'Both values are deterministic HMACs of the site\'s hash_salt — nothing is generated or stored; the same command always returns the same value on the same site, and nothing needs rotating.'|trans }}</p>
+<p>{{ 'Typical workflow: (1) add the creation key to settings.php; (2) build/edit the Unsafe Custom SQL block, tick its confirmation checkbox, and save — this signs the new content; (3) remove the creation key; (4) ensure the run key is present (add it once, leave it) so the now-signed block actually executes going forward. To add another new block later, repeat from step 1 — the run key never needs touching for that.'|trans }}</p>
+<p>{{ 'If the creation key is left in settings.php after step (3), the site status report (<code>/admin/reports/status</code>) will keep warning about it.'|trans }}</p>
+<p>{{ 'Unsafe Custom SQL has no table/command restriction at all — not even the single-statement whitelist check ordinary Custom SQL applies. It still shares Custom SQL\'s other constraints: single statement per block, the length cap, the SQL time limit, the distributed lock, and full watchdog audit logging (flagged UNSAFE in the log line).'|trans }}</p>
+
+<h2>{{ 'Limits'|trans }}</h2>
+<ul>
+  <li>{{ 'Maximum 200 operations per run.'|trans }}</li>
+  <li>{{ 'Maximum 50 source tables or columns per operation.'|trans }}</li>
+  <li>{{ 'Hierarchy mode resolves one level of taxonomy parent only.'|trans }}</li>
+  <li>{{ 'Only the default Drupal database connection is supported — cross-server aggregation is not possible.'|trans }}</li>
+  <li>{{ 'Custom SQL: only the single write target (if any) is checked against the Search API table whitelist — what it reads from is not. Still subject to the SQL time limit and the distributed lock.'|trans }}</li>
+  <li>{{ 'Unsafe Custom SQL: no table or command restriction of any kind — requires the search_api_sql_aggregator_unsafe submodule to be installed; see the dedicated section above for that and the settings.php keys that gate it.'|trans }}</li>
+</ul>

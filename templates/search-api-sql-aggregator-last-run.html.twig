@@ -1,0 +1,106 @@
+{#
+  Variables: status, date, logs, total_time, trigger (manual|cron|request|null)
+#}
+{% if status %}
+<div class="sas-report">
+
+  <div class="sas-report__header">
+    <div class="sas-report__meta">
+      {% if status == 'SUCCESS' %}
+        <span class="sas-report__icon">&#9989;</span>
+      {% else %}
+        <span class="sas-report__icon">&#9888;&#65039;</span>
+      {% endif %}
+      <div>
+        <strong class="sas-report__title">{{ 'Last Run'|trans }}: {{ date }}</strong>
+        {% if trigger %}
+          <span class="sas-trigger-badge sas-trigger-badge--{{ trigger }}">{{ trigger }}</span>
+        {% endif %}
+        {% if total_time %}
+          <span class="sas-report__time">{{ 'Total time'|trans }}: <strong>{{ total_time }}s</strong></span>
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      {% if status == 'SUCCESS' %}
+        <span class="sas-status-badge sas-status-badge--ok">SUCCESS</span>
+      {% else %}
+        <span class="sas-status-badge sas-status-badge--warn">WARNING / ERROR</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sas-report__logs">
+
+    <div class="sas-report__logs-header">
+      <span>{{ 'Operation / Target'|trans }}</span>
+      <span>{{ 'Result'|trans }}</span>
+    </div>
+
+    {% for log in logs %}
+      <details class="sas-log-row">
+        <summary class="sas-log-row__summary">
+          <div class="sas-log-row__left">
+            <span class="sas-log-row__arrow">&#9658;</span>
+            {% if log.type %}
+              <span class="sas-op-badge sas-op-badge--{{ log.type|replace({'_': '-'}) }}">{{ log.type|upper|replace({'_': ' '}) }}</span>
+            {% endif %}
+            <span class="sas-log-row__table-wrap">
+              <span class="sas-log-row__table">{{ log.target ?? log.parent }}</span>
+              {% if log.target_label %}
+                <span class="sas-log-row__table-label">{{ log.target_label }}</span>
+              {% endif %}
+            </span>
+          </div>
+          <div class="sas-log-row__right">
+            <span class="sas-log-row__msg">{{ log.msg }}</span>
+            {% if log.status == 'OK' %}
+              <span class="sas-status-badge sas-status-badge--ok sas-status-badge--small">OK</span>
+            {% else %}
+              <span class="sas-status-badge sas-status-badge--err sas-status-badge--small">ERROR</span>
+            {% endif %}
+          </div>
+        </summary>
+
+        <div class="sas-log-row__detail">
+          <table class="sas-detail-table">
+            <thead>
+              <tr>
+                <th>{{ 'Operation'|trans }}</th>
+                <th>{{ 'Target'|trans }}</th>
+                <th>{{ 'Rows'|trans }}</th>
+                <th>{{ 'Time'|trans }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for step in log.details %}
+                <tr>
+                  <td class="sas-detail-table__op">{{ step.op }}</td>
+                  <td class="sas-detail-table__target">
+                    <div>{{ step.target }}</div>
+                    {% if step.target_label %}
+                      <div class="sas-detail-table__target-label">{{ step.target_label }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if step.rows != '-' and step.rows != '?' %}
+                      <strong>{{ step.rows }}</strong>
+                    {% else %}
+                      <span class="sas-muted">{{ step.rows }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="sas-muted">{{ step.time }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% else %}
+      <div class="sas-list-empty">{{ 'No logs available.'|trans }}</div>
+    {% endfor %}
+
+  </div>
+
+</div>
+{% endif %}

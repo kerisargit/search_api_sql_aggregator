@@ -1,0 +1,1002 @@
+# Russian translation for Search API SQL Aggregator.
+# Copyright (C) 2026
+# This file is distributed under the same license as the search_api_sql_aggregator module.
+msgid ""
+msgstr ""
+"Project-Id-Version: search_api_sql_aggregator\n"
+"PO-Revision-Date: 2026-07-21\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+# ---------------------------------------------------------------------------
+# Menu link
+# ---------------------------------------------------------------------------
+
+msgid "Search API SQL Aggregator"
+msgstr "Search API SQL Aggregator"
+
+msgid "SQL Aggregator Settings"
+msgstr "Настройки SQL Агрегатора"
+
+msgid "Configure direct SQL aggregation rules for facets."
+msgstr "Настройка правил прямой SQL-агрегации для фасетного поиска."
+
+# ---------------------------------------------------------------------------
+# hook_help()
+# ---------------------------------------------------------------------------
+
+msgid "About"
+msgstr "О модуле"
+
+msgid "Search API SQL Aggregator runs configurable SQL operations directly against Search API Database backend tables. Five operation types can be freely combined to maintain aggregated data for high-performance faceted search — without rebuilding the full Search API index."
+msgstr "Search API SQL Aggregator выполняет настраиваемые SQL-операции непосредственно над таблицами бэкенда Search API Database. Пять типов операций можно свободно комбинировать для поддержания агрегированных данных при высокопроизводительном фасетном поиске — без пересборки индекса Search API."
+
+msgid "Settings page"
+msgstr "Страница настроек"
+
+msgid "Security model"
+msgstr "Модель безопасности"
+
+msgid "Every write passes through four independent layers of defence:"
+msgstr "Каждая операция записи проходит четыре независимых уровня защиты:"
+
+msgid "<strong>Syntax</strong> — table and column names may only contain lowercase letters, digits, and underscores."
+msgstr "<strong>Синтаксис</strong> — имена таблиц и столбцов могут содержать только строчные буквы латиницы, цифры и знаки подчёркивания."
+
+msgid "<strong>Prefix</strong> — all table names MUST start with <code>search_api_db_</code>. There is no override."
+msgstr "<strong>Префикс</strong> — все имена таблиц ДОЛЖНЫ начинаться с <code>search_api_db_</code>. Исключений нет."
+
+msgid "<strong>Existence</strong> — the table must exist in the database at run time."
+msgstr "<strong>Существование</strong> — таблица должна существовать в базе данных на момент выполнения."
+
+msgid "<strong>Whitelist</strong> — tables are cross-referenced against registered Search API indexes."
+msgstr "<strong>Белый список</strong> — таблицы сверяются со списком зарегистрированных индексов Search API."
+
+msgid "Additionally, core Search API tracking columns (<code>item_id</code>, <code>search_api_id</code>, <code>search_api_datasource</code>, <code>search_api_language</code>, <code>search_api_relevance</code>, <code>search_api_random</code>) can never be used as write targets."
+msgstr "Кроме того, служебные столбцы Search API (<code>item_id</code>, <code>search_api_id</code>, <code>search_api_datasource</code>, <code>search_api_language</code>, <code>search_api_relevance</code>, <code>search_api_random</code>) никогда не могут использоваться в качестве цели записи."
+
+msgid "Aggregate functions for fill-from-union are validated against a hard allowlist (MIN, MAX, SUM, COUNT, AVG). No SQL injection is possible via configuration."
+msgstr "Агрегатные функции для операции Fill From Union проверяются по строгому белому списку (MIN, MAX, SUM, COUNT, AVG). SQL-инъекция через конфигурацию невозможна."
+
+msgid "The whitelist (layer 4) is a <strong>hard block</strong>: a table that has the correct prefix but is not registered to any Search API index is refused as a write target — including for Custom SQL, whose single write target (if it has one) goes through this same check. Custom SQL still differs in one way: what it only reads from (JOIN, subqueries, WHERE) is not checked against these four layers at all."
+msgstr "Белый список (слой 4) — это <strong>жёсткая блокировка</strong>: таблица с верным префиксом, но не зарегистрированная ни за одним индексом Search API, отклоняется как цель записи — в том числе для Custom SQL, единственная цель записи которого (если она есть) проходит через ту же проверку. Custom SQL всё же отличается в одном: то, что он только читает (JOIN, подзапросы, WHERE), этими четырьмя слоями вообще не проверяется."
+
+msgid "Permissions"
+msgstr "Права доступа"
+
+msgid "Three dedicated permissions gate this module. None is granted to any role by default:"
+msgstr "Модуль защищён тремя отдельными правами доступа. Ни одно из них не выдано ни одной роли по умолчанию:"
+
+msgid "<strong>Administer SQL Aggregator</strong> — required to open this settings page, build configurations, and run the five safe operation types."
+msgstr "<strong>Администрирование SQL Агрегатора</strong> — требуется для открытия этой страницы настроек, построения конфигураций и запуска пяти безопасных типов операций."
+
+msgid "<strong>SQL Aggregator: Custom SQL</strong> — additionally required to create, import, or run Custom SQL operations. By itself this permission is NOT enough to run anything — deny-by-default plus its own pair of settings.php keys are also required, see the dedicated \"Custom SQL\" section below. Grant only to fully trusted administrators: reads are unrestricted (equivalent to raw database access for SELECT-like statements), and while writes are checked against the Search API table whitelist, that check is a mistake guardrail, not a hardened boundary against a determined holder of this permission."
+msgstr "<strong>SQL Агрегатор: произвольный SQL (Custom SQL)</strong> — дополнительно требуется для создания, импорта или запуска операций Custom SQL. Само по себе это право НЕДОСТАТОЧНО для выполнения — также требуется, чтобы по умолчанию не было выключено, плюс собственная пара ключей settings.php, см. раздел «Custom SQL» ниже. Выдавайте только полностью доверенным администраторам: чтение не ограничено (эквивалентно прямому доступу к базе данных для SELECT-подобных операторов), а записи хоть и проверяются по белому списку таблиц Search API, эта проверка — защита от ошибки, а не надёжная граница против того, кто намеренно хочет её обойти, уже имея это право."
+
+msgid "<strong>SQL Aggregator: Unsafe Custom SQL</strong> — additionally required to create, import, or run Unsafe Custom SQL operations (no table/command restriction at all). By itself this permission is NOT enough to run anything — see the dedicated \"Unsafe Custom SQL\" section below for the two settings.php values also required, AND the dependent \"Unsafe Custom SQL\" submodule (<code>search_api_sql_aggregator_unsafe</code>), which must be installed as well. Grant to as few accounts as possible, ideally none."
+msgstr "<strong>SQL Агрегатор: небезопасный произвольный SQL (Custom SQL Unsafe)</strong> — дополнительно требуется для создания, импорта или запуска операций Unsafe Custom SQL (совсем без ограничений на таблицы/команды). Само по себе это право НЕДОСТАТОЧНО для выполнения — см. раздел «Unsafe Custom SQL» ниже про два дополнительных значения settings.php, А ТАКЖЕ зависимый субмодуль «Unsafe Custom SQL» (<code>search_api_sql_aggregator_unsafe</code>), который тоже должен быть установлен. Выдавайте как можно меньшему числу учётных записей, в идеале — никому."
+
+msgid "Note: user 1 and any role flagged as an administrator role bypass the permission system — and on some sites every administrator role is granted every permission automatically regardless of that flag. Custom SQL and Unsafe Custom SQL are both off by default (<code>$settings['search_api_sql_aggregator_allow_custom_sql']</code> defaults to disallowed); leaving it unset in <code>settings.php</code> already locks both out for every account, including those."
+msgstr "Обратите внимание: пользователь 1 и любая роль, отмеченная как административная, обходят систему прав доступа — а на некоторых сайтах каждой административной роли автоматически выдаются все права независимо от этого флага. Custom SQL и Unsafe Custom SQL по умолчанию выключены (<code>$settings['search_api_sql_aggregator_allow_custom_sql']</code> по умолчанию — «не разрешено»); если оставить его не заданным в <code>settings.php</code>, обе категории уже заблокированы для любой учётной записи, включая эти."
+
+msgid "Custom SQL content is additionally signed with an HMAC computed from the site's hash_salt (settings.php only — never stored in the database) whenever this form saves it. A configuration written by any other means, such as direct database access or configuration import, will not carry a valid signature, so its Custom SQL blocks are refused at run time — on cron, on request-triggered runs, and on manual runs — until re-saved here by a user holding the permission. Custom SQL and Unsafe Custom SQL each have their own independent signature, plus their own separate pair of settings.php keys — described below for each."
+msgstr "Содержимое Custom SQL дополнительно подписывается HMAC, вычисленным из hash_salt сайта (хранится только в settings.php — никогда в базе данных), каждый раз при сохранении через эту форму. Конфигурация, записанная любым другим способом — например, прямым доступом к базе данных или импортом конфигурации, — не будет иметь корректной подписи, поэтому её блоки Custom SQL будут отклонены при выполнении — на cron, при запуске по триггеру запроса и при ручном запуске — пока конфигурация не будет пересохранена здесь пользователем с соответствующим правом. У Custom SQL и Unsafe Custom SQL — каждая со своей независимой подписью, плюс своя отдельная пара ключей settings.php, описанных ниже для каждой."
+
+msgid "Operation types"
+msgstr "Типы операций"
+
+msgid "Aggregate"
+msgstr "Агрегация"
+
+msgid "Clears the target table (via DELETE, not TRUNCATE — TRUNCATE would silently commit and break the transaction on MySQL), then INSERTs de-duplicated rows from one or more source tables. Optionally updates a column in the main index table. Supports <em>hierarchy mode</em> which resolves one level of taxonomy parent."
+msgstr "Очищает целевую таблицу (через DELETE, а не TRUNCATE — TRUNCATE на MySQL молча закоммитит и сломает транзакцию), затем выполняет INSERT дедублицированных строк из одной или нескольких исходных таблиц. Опционально обновляет столбец в главной таблице индекса. Поддерживает <em>режим иерархии</em> — разворачивает один уровень таксономии-родителя."
+
+msgid "<em>Use case:</em> collapse multiple per-entity-bundle field tables into one aggregated lookup table, then propagate the value back to the main index."
+msgstr "<em>Пример применения:</em> объединение нескольких таблиц полей разных бандлов сущностей в одну агрегированную таблицу с последующим обновлением главного индекса."
+
+msgid "Copy"
+msgstr "Копирование"
+
+msgid "Copies one column to another across any two Search API DB tables, joined on <code>item_id</code>. No rows are truncated."
+msgstr "Копирует один столбец в другой между любыми двумя таблицами Search API DB, связанными по <code>item_id</code>. Строки не удаляются."
+
+msgid "<em>Use case:</em> propagate a value from one index field column to another without rebuilding the index."
+msgstr "<em>Пример применения:</em> перенос значения из одного столбца поля индекса в другой без пересборки индекса."
+
+msgid "Null Reset"
+msgstr "Сброс в NULL"
+
+msgid "Sets a target column to NULL for all rows in a table."
+msgstr "Устанавливает значение целевого столбца в NULL для всех строк таблицы."
+
+msgid "<em>Use case:</em> clear a derived field before re-populating it with subsequent Copy or Fill Union operations."
+msgstr "<em>Пример применения:</em> очистка вычисляемого поля перед заполнением последующими операциями Копирование или Заполнение из объединения."
+
+msgid "Fill From Union"
+msgstr "Заполнение из объединения"
+
+msgid "Aggregates values from multiple source columns using MIN, MAX, SUM, COUNT, or AVG and writes the result into a single target column, joined on <code>item_id</code>."
+msgstr "Агрегирует значения из нескольких исходных столбцов с помощью MIN, MAX, SUM, COUNT или AVG и записывает результат в один целевой столбец, связанный по <code>item_id</code>."
+
+msgid "<em>Use case:</em> compute a rolled-up metric across several field tables and store it in the main index column."
+msgstr "<em>Пример применения:</em> вычисление сводного показателя по нескольким таблицам полей и сохранение его в столбце главного индекса."
+
+msgid "Priority Fill"
+msgstr "Приоритетное заполнение"
+
+msgid "Updates a target column using COALESCE across multiple ordered source columns. The first non-NULL value wins, making source order the priority."
+msgstr "Обновляет целевой столбец с помощью COALESCE по нескольким упорядоченным исходным столбцам. Побеждает первое ненулевое значение, то есть порядок источников определяет приоритет."
+
+msgid "<em>Use case:</em> fill a field from the most-specific source first (e.g. bundle-specific table) and fall back to a generic source when the specific one is NULL."
+msgstr "<em>Пример применения:</em> заполнение поля из наиболее специфического источника (например, таблицы конкретного бандла) с откатом к общему источнику при отсутствии значения."
+
+msgid "Custom SQL"
+msgstr "Произвольный SQL (Custom SQL)"
+
+msgid "⚠ DANGER: reads are unrestricted — a Custom SQL statement may JOIN, subquery, or filter against any table in the database. Only its single write target (if it has one) is checked against the Search API table whitelist; anything it only reads from is not verified. Misuse can still permanently destroy data within that scope."
+msgstr "⚠ ОПАСНО: чтение не ограничено — оператор Custom SQL может делать JOIN, подзапросы или фильтрацию по любой таблице базы данных. Проверяется по белому списку таблиц Search API только его единственная цель записи (если она есть); то, что он лишь читает, не проверяется. Неправильное использование в этих пределах всё ещё может безвозвратно уничтожить данные."
+
+msgid "Custom SQL requires the dedicated <em>SQL Aggregator: Custom SQL</em> permission and can be disabled entirely via <code>$settings['search_api_sql_aggregator_allow_custom_sql'] = FALSE;</code>. This switch is deny-by-default — a fresh site with nothing set in settings.php refuses Custom SQL outright, requiring an explicit <code>$settings['search_api_sql_aggregator_allow_custom_sql'] = TRUE;</code> to opt in."
+msgstr "Custom SQL требует отдельного права <em>SQL Агрегатор: произвольный SQL (Custom SQL)</em> и может быть полностью отключён через <code>$settings['search_api_sql_aggregator_allow_custom_sql'] = FALSE;</code>. Этот переключатель по умолчанию выключен — свежий сайт без настроек в settings.php отклоняет Custom SQL полностью, требуя явного <code>$settings['search_api_sql_aggregator_allow_custom_sql'] = TRUE;</code> для включения."
+
+msgid "On top of the permission and the switch, Custom SQL also requires its own pair of settings.php keys (same model as Unsafe Custom SQL below, added for the same reason: a Drupal permission alone doesn't meaningfully gate who can introduce new SQL on a site where every administrator role has every permission) — kept as a SEPARATE key pair from Unsafe Custom SQL's, since the two categories already have independent permissions and signatures:"
+msgstr "Помимо права и переключателя, Custom SQL также требует свою собственную пару ключей settings.php (та же модель, что и у Unsafe Custom SQL ниже, добавлена по той же причине: одно право Drupal само по себе не ограничивает, кто может вводить новый SQL, на сайте, где каждой административной роли выдаются все права) — сохранена как ОТДЕЛЬНАЯ пара ключей от Unsafe Custom SQL, поскольку у двух категорий уже есть независимые права и подписи:"
+
+msgid "<code>$settings['search_api_sql_aggregator_custom_sql_create_key']</code> — required only at the moment the set of Custom SQL blocks is actually changing. Meant to be temporary: add it, save the new/changed block once, remove it again."
+msgstr "<code>$settings['search_api_sql_aggregator_custom_sql_create_key']</code> — нужен только в момент, когда набор блоков Custom SQL реально меняется. Задуман как временный: добавили, сохранили новый/изменённый блок один раз, убрали снова."
+
+msgid "<code>$settings['search_api_sql_aggregator_custom_sql_run_key']</code> — required for any already-approved Custom SQL block to execute at all, on any trigger. Meant to stay in place for as long as the site wants Custom SQL to keep running."
+msgstr "<code>$settings['search_api_sql_aggregator_custom_sql_run_key']</code> — нужен, чтобы уже одобренный блок Custom SQL вообще мог выполняться, при любом триггере. Задуман оставаться на месте, пока сайту нужно, чтобы Custom SQL продолжал работать."
+
+msgid "If the creation key is left in settings.php after it's no longer needed, the site status report (<code>/admin/reports/status</code>) will keep warning about it — it's meant to be removed once you're done authoring."
+msgstr "Если ключ создания оставлен в settings.php после того, как он больше не нужен, отчёт о состоянии сайта (<code>/admin/reports/status</code>) будет продолжать предупреждать об этом — он задуман быть убранным, как только вы закончили создание."
+
+msgid "Executes a single SQL statement. Use Drupal's <code>{table}</code> notation for table-prefix support. Only single-statement SQL is supported per block; use multiple Custom SQL blocks for multiple statements (a statement containing an embedded <code>;</code> is refused)."
+msgstr "Выполняет один SQL-оператор. Используйте нотацию Drupal <code>{table}</code> для поддержки префиксов таблиц. В одном блоке поддерживается только один SQL-оператор; для нескольких операторов используйте несколько блоков Custom SQL (оператор с внутренним <code>;</code> отклоняется)."
+
+msgid "Supported write forms — the table immediately named must be a Search API table: <code>INSERT INTO {table} ...</code>, <code>UPDATE {table} SET ...</code> (no JOIN or alias), <code>DELETE FROM {table} ...</code> (no JOIN or multi-table list), <code>REPLACE INTO {table} ...</code>, <code>TRUNCATE [TABLE] {table}</code>. Read-only statements (<code>SELECT</code>, <code>SHOW</code>, <code>EXPLAIN</code>, <code>DESCRIBE</code>) may reference any table, but may not contain <code>INTO</code> (blocks <code>SELECT ... INTO OUTFILE/DUMPFILE</code> and Postgres's <code>SELECT ... INTO table</code>, neither of which this check can verify). Statements starting with <code>WITH</code> (CTEs) and any command outside this list (DDL, <code>GRANT</code>, <code>CALL</code>, ...) are refused outright."
+msgstr "Поддерживаемые формы записи — таблица, указанная сразу после команды, должна быть таблицей Search API: <code>INSERT INTO {table} ...</code>, <code>UPDATE {table} SET ...</code> (без JOIN и алиаса), <code>DELETE FROM {table} ...</code> (без JOIN и списка из нескольких таблиц), <code>REPLACE INTO {table} ...</code>, <code>TRUNCATE [TABLE] {table}</code>. Операторы только для чтения (<code>SELECT</code>, <code>SHOW</code>, <code>EXPLAIN</code>, <code>DESCRIBE</code>) могут ссылаться на любую таблицу, но не должны содержать <code>INTO</code> (блокирует <code>SELECT ... INTO OUTFILE/DUMPFILE</code> и <code>SELECT ... INTO table</code> в Postgres — ни то, ни другое эта проверка подтвердить не может). Операторы, начинающиеся с <code>WITH</code> (CTE), и любые команды вне этого списка (DDL, <code>GRANT</code>, <code>CALL</code>, ...) отклоняются полностью."
+
+msgid "<em>Use case:</em> a write to a Search API table sourced from an arbitrary table, e.g. <code>UPDATE {search_api_db_my_index} SET field_label = (SELECT name FROM taxonomy_term_field_data WHERE tid = field_tid)</code> — the read side is unrestricted, only the <code>UPDATE</code> target is checked."
+msgstr "<em>Пример применения:</em> запись в таблицу Search API с данными из произвольной таблицы, например <code>UPDATE {search_api_db_my_index} SET field_label = (SELECT name FROM taxonomy_term_field_data WHERE tid = field_tid)</code> — сторона чтения не ограничена, проверяется только цель <code>UPDATE</code>."
+
+msgid "This is a guardrail against a mistyped table name, not a hardened boundary: the permission itself is still equivalent to broad database trust, and SQL this check cannot confidently classify is refused rather than run unchecked — see the security contract note above."
+msgstr "Это защита от опечатки в имени таблицы, а не надёжная граница: само право по-прежнему эквивалентно широкому доверию к базе данных, а SQL, который эта проверка не может уверенно классифицировать, отклоняется, а не выполняется без проверки — см. примечание о контракте безопасности выше."
+
+msgid "All executions are logged to the Drupal watchdog with the full SQL text (truncated at 200 characters). The distributed lock still applies, so Custom SQL blocks are never run concurrently."
+msgstr "Каждое выполнение записывается в журнал Drupal (watchdog) с полным текстом SQL (обрезанным до 200 символов). Распределённая блокировка по-прежнему действует, поэтому блоки Custom SQL никогда не выполняются параллельно."
+
+msgid "Unsafe Custom SQL"
+msgstr "Unsafe Custom SQL (небезопасный)"
+
+msgid "⚠⚠ DANGER: genuinely unrestricted — any table, any SQL command, exactly equivalent to a raw database connection. There is no write-target check of any kind."
+msgstr "⚠⚠ ОПАСНО: по-настоящему без ограничений — любая таблица, любая SQL-команда, полный эквивалент прямого подключения к базе данных. Проверки цели записи нет вообще никакой."
+
+msgid "Unsafe Custom SQL lives in a separate, dependent submodule: <strong>Search API SQL Aggregator - Unsafe Custom SQL</strong> (<code>search_api_sql_aggregator_unsafe</code>). Uninstalling that submodule makes this capability structurally unavailable on a site — not merely permission-gated — regardless of any settings.php value or saved configuration. A site that never needs it should simply never install it. Everything below in this section only applies once the submodule IS installed; without it, any saved Unsafe Custom SQL block is refused outright with a \"submodule not installed\" message."
+msgstr "Unsafe Custom SQL живёт в отдельном зависимом субмодуле: <strong>Search API SQL Aggregator - Unsafe Custom SQL</strong> (<code>search_api_sql_aggregator_unsafe</code>). Удаление этого субмодуля делает данную возможность структурно недоступной на сайте — не просто ограниченной правом доступа — независимо от любых значений settings.php или сохранённой конфигурации. Сайту, которому это никогда не понадобится, достаточно просто никогда его не устанавливать. Всё, что описано ниже в этом разделе, применимо только когда субмодуль УСТАНОВЛЕН; без него любой сохранённый блок Unsafe Custom SQL отклоняется сразу с сообщением «субмодуль не установлен»."
+
+msgid "Exists for the SQL that ordinary Custom SQL refuses to classify — a JOIN in an UPDATE/DELETE, DDL (CREATE/ALTER/DROP), a CTE (WITH ...), and so on. Requires the dedicated <em>SQL Aggregator: Unsafe Custom SQL</em> permission AND the block's own explicit <code>confirmed: true</code> flag (the builder's checkbox) — but on a site where every administrator role is granted every permission automatically, neither of those meaningfully separates who can introduce it, which is why execution additionally requires two independent settings.php values that only someone with server/deploy access can compute and set:"
+msgstr "Существует для SQL, который обычный Custom SQL отказывается классифицировать — JOIN в UPDATE/DELETE, DDL (CREATE/ALTER/DROP), CTE (WITH ...) и т.п. Требует отдельного права <em>SQL Агрегатор: небезопасный произвольный SQL (Custom SQL Unsafe)</em> И собственного явного флага блока <code>confirmed: true</code> (чекбокс в конструкторе) — но на сайте, где каждой административной роли автоматически выдаются все права, ни то ни другое по-настоящему не разделяет, кто может его ввести, поэтому выполнение дополнительно требует два независимых значения settings.php, которые может вычислить и установить только тот, у кого есть доступ к серверу/деплою:"
+
+msgid "<code>$settings['search_api_sql_aggregator_unsafe_custom_sql_create_key']</code> — required only at the moment the set of Unsafe Custom SQL blocks is actually changing (a block added, edited, removed, or reordered). Meant to be temporary: add it, save the new/changed block once, remove it again. Saving unrelated settings, or re-saving unchanged Unsafe Custom SQL content, never requires it."
+msgstr "<code>$settings['search_api_sql_aggregator_unsafe_custom_sql_create_key']</code> — нужен только в момент, когда набор блоков Unsafe Custom SQL реально меняется (блок добавлен, изменён, удалён или переставлен). Задуман как временный: добавили, сохранили новый/изменённый блок один раз, убрали снова. Сохранение несвязанных настроек или пересохранение неизменённого содержимого Unsafe Custom SQL никогда его не требует."
+
+msgid "<code>$settings['search_api_sql_aggregator_unsafe_custom_sql_run_key']</code> — required for any already-approved Unsafe Custom SQL block to execute at all, on any trigger (cron, request, index-complete, manual). Meant to stay in place for as long as the site wants that block to keep running; removing it halts all Unsafe Custom SQL execution immediately, with no change to configuration or State."
+msgstr "<code>$settings['search_api_sql_aggregator_unsafe_custom_sql_run_key']</code> — нужен, чтобы уже одобренный блок Unsafe Custom SQL вообще мог выполняться, при любом триггере (cron, request, index-complete, manual). Задуман оставаться на месте, пока сайту нужно, чтобы этот блок продолжал работать; удаление немедленно останавливает выполнение всего Unsafe Custom SQL без каких-либо изменений в конфигурации или State."
+
+msgid "Compute the expected value for each key with drush (requires server access — nothing above the correct value is ever exposed anywhere in the web UI):"
+msgstr "Вычислите ожидаемое значение для каждого ключа через drush (требует доступа к серверу — правильное значение нигде не отображается в веб-интерфейсе):"
+
+msgid "Both values are deterministic HMACs of the site's hash_salt — nothing is generated or stored; the same command always returns the same value on the same site, and nothing needs rotating."
+msgstr "Оба значения — детерминированные HMAC от hash_salt сайта: ничего не генерируется и не хранится; одна и та же команда всегда возвращает одно и то же значение на одном и том же сайте, и ничего не нужно ротировать."
+
+msgid "Typical workflow: (1) add the creation key to settings.php; (2) build/edit the Unsafe Custom SQL block, tick its confirmation checkbox, and save — this signs the new content; (3) remove the creation key; (4) ensure the run key is present (add it once, leave it) so the now-signed block actually executes going forward. To add another new block later, repeat from step 1 — the run key never needs touching for that."
+msgstr "Типичный порядок действий: (1) добавьте ключ создания в settings.php; (2) постройте/отредактируйте блок Unsafe Custom SQL, отметьте чекбокс подтверждения и сохраните — это подпишет новое содержимое; (3) уберите ключ создания; (4) убедитесь, что ключ выполнения присутствует (добавьте один раз и оставьте), чтобы теперь подписанный блок реально выполнялся дальше. Чтобы позже добавить ещё один новый блок, повторите с шага 1 — ключ выполнения для этого трогать не нужно."
+
+msgid "If the creation key is left in settings.php after step (3), the site status report (<code>/admin/reports/status</code>) will keep warning about it."
+msgstr "Если ключ создания оставлен в settings.php после шага (3), отчёт о состоянии сайта (<code>/admin/reports/status</code>) будет продолжать предупреждать об этом."
+
+msgid "Unsafe Custom SQL has no table/command restriction at all — not even the single-statement whitelist check ordinary Custom SQL applies. It still shares Custom SQL's other constraints: single statement per block, the length cap, the SQL time limit, the distributed lock, and full watchdog audit logging (flagged UNSAFE in the log line)."
+msgstr "У Unsafe Custom SQL вообще нет ограничений на таблицы/команды — даже проверки по белому списку в рамках одного оператора, которая есть у обычного Custom SQL. Остальные ограничения Custom SQL при этом действуют: один оператор на блок, лимит длины, таймаут SQL, распределённая блокировка и полное аудит-логирование в watchdog (в строке лога помечается UNSAFE)."
+
+msgid "Configuration format"
+msgstr "Формат конфигурации"
+
+msgid "Operations are configured via the visual builder and stored as a JSON array. Each object has a <code>type</code> discriminator field. Old-format blocks (<code>parent</code> + <code>children</code>) are automatically converted."
+msgstr "Операции настраиваются с помощью визуального конструктора и хранятся в виде JSON-массива. Каждый объект содержит поле-дискриминатор <code>type</code>. Блоки старого формата (<code>parent</code> + <code>children</code>) конвертируются автоматически."
+
+msgid "Cron integration"
+msgstr "Интеграция с Cron"
+
+msgid "Enable <em>Run aggregation on Cron</em> on the settings page and choose a minimum interval between runs. A distributed lock prevents concurrent executions. The last-run report on the settings page shows per-operation timing and row counts."
+msgstr "Включите <em>Запуск агрегации по Cron</em> на странице настроек и задайте минимальный интервал между запусками. Распределённая блокировка предотвращает параллельное выполнение. Отчёт о последнем запуске на странице настроек показывает время выполнения и количество затронутых строк по каждой операции."
+
+msgid "<em>Also trigger after Search API finishes indexing</em> runs aggregation right after a Search API index finishes a full indexing pass — a manual reindex catching up, or cron indexing emptying the queue — instead of on a time-based schedule. It ignores the schedule/interval by design (a finished reindex is treated as a deliberate signal, like the <em>Run Aggregation Now</em> button, not a passive timer), only fires for a batch of more than one item so routine single-item saves do not trigger it, and only for an index that at least one configured operation actually references."
+msgstr "<em>Также запускать после завершения индексации Search API</em> запускает агрегацию сразу после того, как индекс Search API завершит полный проход индексации — ручная переиндексация догнала очередь, или cron-индексация опустошила очередь — вместо запуска по расписанию. Намеренно игнорирует расписание/интервал: завершённая переиндексация трактуется как осознанный сигнал, подобно кнопке <em>Запустить агрегацию сейчас</em>, а не как пассивный таймер. Срабатывает только для пачки более чем из одного элемента (чтобы рядовые сохранения по одному элементу его не запускали), и только для индекса, на который ссылается хотя бы одна настроенная операция."
+
+msgid "Limits"
+msgstr "Ограничения"
+
+msgid "Maximum 200 operations per run."
+msgstr "Не более 200 операций за один запуск."
+
+msgid "Maximum 50 source tables or columns per operation."
+msgstr "Не более 50 исходных таблиц или столбцов на операцию."
+
+msgid "Hierarchy mode resolves one level of taxonomy parent only."
+msgstr "Режим иерархии разворачивает только один уровень родителя таксономии."
+
+msgid "Only the default Drupal database connection is supported — cross-server aggregation is not possible."
+msgstr "Поддерживается только стандартное подключение к базе данных Drupal — агрегация между разными серверами баз данных невозможна."
+
+msgid "Custom SQL: only the single write target (if any) is checked against the Search API table whitelist — what it reads from is not. Still subject to the SQL time limit and the distributed lock."
+msgstr "Custom SQL: по белому списку таблиц Search API проверяется только единственная цель записи (если она есть) — то, что оператор читает, не проверяется. По-прежнему ограничен таймаутом SQL и распределённой блокировкой."
+
+msgid "Unsafe Custom SQL: no table or command restriction of any kind — requires the search_api_sql_aggregator_unsafe submodule to be installed; see the dedicated section above for that and the settings.php keys that gate it."
+msgstr "Unsafe Custom SQL: вообще никаких ограничений на таблицы или команды — требует установленного субмодуля search_api_sql_aggregator_unsafe; про это и про ключи settings.php, которые это контролируют, см. отдельный раздел выше."
+
+# ---------------------------------------------------------------------------
+# hook_requirements() (search_api_sql_aggregator.install) — /admin/reports/status
+# ---------------------------------------------------------------------------
+
+msgid "No operations configured"
+msgstr "Операции не настроены"
+
+msgid "Configuration is in DRAFT mode (@n operation(s), validation failed)"
+msgstr "Конфигурация в режиме ЧЕРНОВИКА (@n операций, проверка не пройдена)"
+
+msgid "The saved configuration failed validation and will not run on cron. First error: @msg"
+msgstr "Сохранённая конфигурация не прошла проверку и не будет выполняться по крону. Первая ошибка: @msg"
+
+msgid "@n operation(s) configured, cron scheduling enabled"
+msgstr "@n операций настроено, планирование по cron включено"
+
+msgid "@n operation(s) configured, cron scheduling disabled"
+msgstr "@n операций настроено, планирование по cron отключено"
+
+msgid "@status at @date"
+msgstr "@status — @date"
+
+msgid "See the run log on the <a href=\":url\">SQL Aggregator settings page</a>."
+msgstr "См. журнал запуска на <a href=\":url\">странице настроек SQL Агрегатора</a>."
+
+msgid "Search API SQL Aggregator — last run"
+msgstr "Search API SQL Aggregator — последний запуск"
+
+msgid "Search API SQL Aggregator — Custom SQL"
+msgstr "Search API SQL Aggregator — Custom SQL"
+
+msgid "@n Custom SQL block(s) configured, but Custom SQL is disabled in settings.php — these blocks will fail at run time"
+msgstr "@n блок(ов) Custom SQL настроено, но Custom SQL отключён в settings.php — эти блоки завершатся ошибкой при выполнении"
+
+msgid "@n Custom SQL block(s) configured — write target checked against the Search API whitelist, reads are unrestricted"
+msgstr "@n блок(ов) Custom SQL настроено — цель записи проверяется по белому списку Search API, чтение не ограничено"
+
+msgid "@n Custom SQL block(s) configured, but this server has not activated execution (settings.php run key not set) — these blocks will not run"
+msgstr "@n блок(ов) Custom SQL настроено, но этот сервер не активировал выполнение (ключ выполнения settings.php не задан) — эти блоки не будут выполняться"
+
+msgid "Search API SQL Aggregator — Unsafe Custom SQL"
+msgstr "Search API SQL Aggregator — Unsafe Custom SQL"
+
+msgid "@n Unsafe Custom SQL block(s) configured AND ACTIVE on this server — no table/command restriction at all"
+msgstr "@n блок(ов) Unsafe Custom SQL настроено И АКТИВНО на этом сервере — вообще без ограничений на таблицы/команды"
+
+msgid "@n Unsafe Custom SQL block(s) configured, but this server has not activated execution (settings.php run key not set) — these blocks will not run"
+msgstr "@n блок(ов) Unsafe Custom SQL настроено, но этот сервер не активировал выполнение (ключ выполнения settings.php не задан) — эти блоки не будут выполняться"
+
+msgid "@n Unsafe Custom SQL block(s) configured, but the \"Unsafe Custom SQL\" submodule (search_api_sql_aggregator_unsafe) is not installed — these blocks cannot run at all until it is installed"
+msgstr "@n блок(ов) Unsafe Custom SQL настроено, но субмодуль «Unsafe Custom SQL» (search_api_sql_aggregator_unsafe) не установлен — эти блоки вообще не смогут выполняться, пока он не будет установлен"
+
+msgid "Search API SQL Aggregator — creation key left in settings.php"
+msgstr "Search API SQL Aggregator — ключ создания оставлен в settings.php"
+
+msgid "Custom SQL (search_api_sql_aggregator_custom_sql_create_key)"
+msgstr "Custom SQL (search_api_sql_aggregator_custom_sql_create_key)"
+
+msgid "Unsafe Custom SQL (search_api_sql_aggregator_unsafe_custom_sql_create_key)"
+msgstr "Unsafe Custom SQL (search_api_sql_aggregator_unsafe_custom_sql_create_key)"
+
+msgid "The following creation key(s) are meant to be temporary (present only while authoring a new/changed block) but are still configured: @list. Remove the ones no longer in active use from settings.php — leaving them in place indefinitely defeats their purpose."
+msgstr "Следующие ключи создания задуманы как временные (присутствуют только во время создания нового/изменённого блока), но всё ещё настроены: @list. Уберите те, что больше не используются активно, из settings.php — если оставить их бессрочно, это лишает их смысла."
+
+# ---------------------------------------------------------------------------
+# SettingsForm — section titles and field labels
+# ---------------------------------------------------------------------------
+
+msgid "Cron & Automation"
+msgstr "Cron и автоматизация"
+
+msgid "Run aggregation on Cron"
+msgstr "Запускать агрегацию по Cron"
+
+msgid "Minimum interval between runs"
+msgstr "Минимальный интервал между запусками"
+
+msgid "How much time must pass since the last run before cron triggers another one. \"Every cron run\" means it runs every time cron fires, regardless of frequency."
+msgstr "Сколько времени должно пройти с момента последнего запуска до следующего. «Каждый запуск Cron» означает выполнение при каждом срабатывании Cron вне зависимости от частоты."
+
+msgid "Every cron run"
+msgstr "Каждый запуск Cron"
+
+msgid "Every 15 minutes"
+msgstr "Каждые 15 минут"
+
+msgid "Every 30 minutes"
+msgstr "Каждые 30 минут"
+
+msgid "Every 1 hour"
+msgstr "Каждый час"
+
+msgid "Every 3 hours"
+msgstr "Каждые 3 часа"
+
+msgid "Every 6 hours"
+msgstr "Каждые 6 часов"
+
+msgid "Every 12 hours"
+msgstr "Каждые 12 часов"
+
+msgid "Daily (24 h)"
+msgstr "Ежедневно (24 ч)"
+
+msgid "Every 3 days"
+msgstr "Каждые 3 дня"
+
+msgid "Weekly"
+msgstr "Еженедельно"
+
+msgid "Next eligible run: <strong>@time</strong>"
+msgstr "Следующий возможный запуск: <strong>@time</strong>"
+
+msgid "immediately (on the next cron run or visit)"
+msgstr "немедленно (при следующем запуске cron или визите)"
+
+msgid "on every cron run or visit"
+msgstr "при каждом запуске cron или визите"
+
+msgid "Advanced Settings"
+msgstr "Дополнительные настройки"
+
+msgid "PHP Time Limit (seconds)"
+msgstr "Ограничение времени PHP (секунды)"
+
+msgid "SQL Query Timeout (ms)"
+msgstr "Таймаут SQL-запроса (мс)"
+
+msgid "Main Index Table"
+msgstr "Главная таблица индекса"
+
+msgid "Select the primary Search API DB table for this index. Table names follow the pattern <code>search_api_db_{index_id}</code>."
+msgstr "Выберите основную таблицу Search API DB для данного индекса. Имена таблиц соответствуют шаблону <code>search_api_db_{index_id}</code>."
+
+msgid "— Enter custom name —"
+msgstr "— Ввести произвольное имя —"
+
+msgid "Custom Table Name"
+msgstr "Произвольное имя таблицы"
+
+msgid "Only lowercase letters, digits and underscores allowed."
+msgstr "Допускаются только строчные буквы латиницы, цифры и знаки подчёркивания."
+
+msgid "No Search API indexes found. Install and configure Search API first."
+msgstr "Индексы Search API не найдены. Сначала установите и настройте Search API."
+
+msgid "JSON Configuration"
+msgstr "JSON-конфигурация"
+
+msgid "Saved"
+msgstr "Сохранённая"
+
+msgid "Live Preview"
+msgstr "Текущий вид"
+
+msgid "SQL Preview"
+msgstr "Предварительный просмотр SQL"
+
+msgid "Import Configuration from JSON"
+msgstr "Импорт конфигурации из JSON"
+
+msgid "Paste a JSON configuration exported from another environment. <strong>This replaces the current configuration immediately.</strong>"
+msgstr "Вставьте JSON-конфигурацию, экспортированную из другой среды. <strong>Текущая конфигурация будет немедленно заменена.</strong>"
+
+msgid "JSON to import"
+msgstr "JSON для импорта"
+
+msgid "Must be a JSON array of operation objects, each with at minimum <code>type</code> and <code>target_table</code> keys."
+msgstr "Должен быть массивом JSON объектов операций, каждый из которых содержит как минимум ключи <code>type</code> и <code>target_table</code>."
+
+msgid "Import JSON"
+msgstr "Импортировать JSON"
+
+msgid "Save Configuration"
+msgstr "Сохранить конфигурацию"
+
+msgid "Run Aggregation Now"
+msgstr "Запустить агрегацию сейчас"
+
+msgid "Validate Config"
+msgstr "Проверить конфигурацию"
+
+msgid "Clear Saved Config"
+msgstr "Очистить сохранённый конфиг"
+
+msgid "This will permanently delete the saved configuration. Continue?"
+msgstr "Сохранённая конфигурация будет удалена безвозвратно. Продолжить?"
+
+msgid "Saved configuration has been cleared."
+msgstr "Сохранённая конфигурация очищена."
+
+msgid "Run every"
+msgstr "Запускать каждые"
+
+msgid "Unit"
+msgstr "Единица"
+
+msgid "minutes"
+msgstr "минут"
+
+msgid "hours"
+msgstr "часов"
+
+msgid "days"
+msgstr "дней"
+
+msgid "Set to 0 to run on every cron invocation. Maximum: 10 000."
+msgstr "Установите 0, чтобы запускать при каждом выполнении cron. Максимум: 10 000."
+
+msgid "Schedule type"
+msgstr "Тип расписания"
+
+msgid "Every interval"
+msgstr "Каждые N единиц"
+
+msgid "Daily at specific time"
+msgstr "Ежедневно в заданное время"
+
+msgid "Weekly at specific time"
+msgstr "Еженедельно в заданное время"
+
+msgid "Day of week"
+msgstr "День недели"
+
+msgid "Monday"
+msgstr "Понедельник"
+
+msgid "Tuesday"
+msgstr "Вторник"
+
+msgid "Wednesday"
+msgstr "Среда"
+
+msgid "Thursday"
+msgstr "Четверг"
+
+msgid "Friday"
+msgstr "Пятница"
+
+msgid "Saturday"
+msgstr "Суббота"
+
+msgid "Sunday"
+msgstr "Воскресенье"
+
+msgid "Site time (HH:MM)"
+msgstr "Время сайта (ЧЧ:ММ)"
+
+msgid "24-hour time in the site time zone (@tz). The aggregation runs once after this time is reached; a missed run is caught up on the next cron run or visit."
+msgstr "Время в 24-часовом формате в часовом поясе сайта (@tz). Агрегация запускается один раз после наступления этого времени; пропущенный запуск выполняется при следующем запуске cron или визите."
+
+msgid "Requires that Drupal cron fires frequently enough. For sub-hourly schedules, configure an external cron job calling <code>drush cron</code> at the desired frequency."
+msgstr "Требует достаточно частого запуска Drupal cron. Для суб-часовых расписаний настройте внешний cron-job, вызывающий <code>drush cron</code> с нужной частотой."
+
+msgid "Also trigger on page requests"
+msgstr "Также запускать при запросах страниц"
+
+msgid "Runs aggregation after the HTTP response is already sent to the visitor (PHP-FPM: zero page-load impact via <code>fastcgi_finish_request()</code>). The same schedule/interval applies. Use this when your hosting does not support frequent cron — any page visit after the scheduled time will trigger the run. Handled by the Interval Trigger module, which also limits how often requests check the schedule at all (<a href=\":url\">Interval Trigger settings</a>); a lock ensures only one concurrent execution regardless of traffic."
+msgstr "Запускает агрегацию после отправки HTTP-ответа посетителю (PHP-FPM: нулевое влияние на загрузку страниц через <code>fastcgi_finish_request()</code>). Применяются те же настройки расписания/интервала. Используйте, если хостинг не поддерживает частый cron — любой визит после наступления времени запуска инициирует выполнение. Обрабатывается модулем Interval Trigger, который также ограничивает, как часто запросы вообще проверяют расписание (<a href=\":url\">настройки Interval Trigger</a>); блокировка гарантирует только одно одновременное выполнение вне зависимости от трафика."
+
+msgid "Also trigger after Search API finishes indexing"
+msgstr "Также запускать после завершения индексации Search API"
+
+msgid "Runs aggregation right after a Search API index finishes a full indexing pass (e.g. after a manual \"Reindex\" catches up, or cron indexing empties the queue) — instead of on a time-based schedule. Ignores the schedule/interval above by design: a finished reindex is a deliberate, infrequent signal, closer to the \"Run Aggregation Now\" button than to a passive timer. Only fires for a batch of more than one item (so routine single-item saves do not trigger it), and only for an index that at least one configured operation actually references."
+msgstr "Запускает агрегацию сразу после того, как индекс Search API завершит полный проход индексации (например, после того как «ручная переиндексация» догонит очередь, или cron-индексация опустошит очередь) — вместо запуска по расписанию. Намеренно игнорирует расписание/интервал выше: завершённая переиндексация — осознанный, нечастый сигнал, ближе к кнопке «Запустить агрегацию сейчас», чем к пассивному таймеру. Срабатывает только для пачки более чем из одного элемента (чтобы рядовые сохранения по одному элементу не запускали его), и только для индекса, на который ссылается хотя бы одна настроенная операция."
+
+msgid "Drupal system cron last ran: <strong>@time</strong>"
+msgstr "Системный cron Drupal последний раз запускался: <strong>@time</strong>"
+
+msgid "Run history (@n)"
+msgstr "История запусков (@n)"
+
+msgid "unknown"
+msgstr "неизвестно"
+
+# ---------------------------------------------------------------------------
+# SettingsForm — validation and status messages
+# ---------------------------------------------------------------------------
+
+msgid "Interval count must be 0 or greater."
+msgstr "Значение интервала должно быть 0 или больше."
+
+msgid "Interval count must not exceed 10 000."
+msgstr "Значение интервала не должно превышать 10 000."
+
+msgid "PHP Time Limit must not exceed 3600 seconds (1 hour)."
+msgstr "Ограничение времени PHP не должно превышать 3600 секунд (1 час)."
+
+msgid "SQL Query Timeout must not exceed 300 000 ms (5 minutes)."
+msgstr "Таймаут SQL-запроса не должен превышать 300 000 мс (5 минут)."
+
+msgid "Invalid JSON in configuration field."
+msgstr "Некорректный JSON в поле конфигурации."
+
+msgid "Too many operations (@count). Maximum allowed: @max."
+msgstr "Слишком много операций (@count). Максимум: @max."
+
+msgid "Operation #@n has an unknown or missing type."
+msgstr "Операция #@n имеет неизвестный или отсутствующий тип."
+
+msgid "You do not have permission to configure Custom SQL operations (blocks: @n). Remove them or ask an administrator to grant the \"SQL Aggregator: Custom SQL\" permission."
+msgstr "У вас нет права настраивать операции Custom SQL (блоки: @n). Удалите их или попросите администратора выдать право «SQL Агрегатор: произвольный SQL (Custom SQL)»."
+
+msgid "You do not have permission to configure Unsafe Custom SQL operations (blocks: @n). Remove them or ask an administrator to grant the \"SQL Aggregator: Unsafe Custom SQL\" permission."
+msgstr "У вас нет права настраивать операции Unsafe Custom SQL (блоки: @n). Удалите их или попросите администратора выдать право «SQL Агрегатор: небезопасный произвольный SQL (Custom SQL Unsafe)»."
+
+msgid "Operations completed successfully."
+msgstr "Операции выполнены успешно."
+
+msgid "No operations configured. Save a configuration first."
+msgstr "Операции не настроены. Сначала сохраните конфигурацию."
+
+msgid "This configuration contains Custom SQL (blocks: @n) and you do not have permission to run it."
+msgstr "Эта конфигурация содержит Custom SQL (блоки: @n), а у вас нет права её запускать."
+
+msgid "This configuration contains Unsafe Custom SQL (blocks: @n) and you do not have permission to run it."
+msgstr "Эта конфигурация содержит Unsafe Custom SQL (блоки: @n), а у вас нет права её запускать."
+
+msgid "No operations configured to validate."
+msgstr "Нет операций для проверки."
+
+msgid "All @n operation(s) validated successfully."
+msgstr "Все @n операций прошли проверку успешно."
+
+msgid "@target: @msg"
+msgstr "@target: @msg"
+
+msgid "JSON input is empty."
+msgstr "Поле JSON не заполнено."
+
+msgid "Invalid JSON: @error"
+msgstr "Некорректный JSON: @error"
+
+msgid "Entry @n is not an object."
+msgstr "Запись @n не является объектом."
+
+msgid "Entry @n has an unknown or missing operation type."
+msgstr "В записи @n неизвестный или отсутствующий тип операции."
+
+msgid "Entry @n is missing required key (target_table)."
+msgstr "В записи @n отсутствует обязательный ключ (target_table)."
+
+msgid "Import refused: entries @n are Custom SQL and you do not have permission to configure them."
+msgstr "Импорт отклонён: записи @n являются Custom SQL, а у вас нет права их настраивать."
+
+msgid "Import refused: entries @n are Unsafe Custom SQL and you do not have permission to configure them."
+msgstr "Импорт отклонён: записи @n являются Unsafe Custom SQL, а у вас нет права их настраивать."
+
+msgid "Imported @n block(s) successfully."
+msgstr "Успешно импортировано @n блок(ов)."
+
+msgid "Imported configuration failed validation and is in DRAFT mode — it will not run on cron."
+msgstr "Импортированная конфигурация не прошла проверку и находится в режиме ЧЕРНОВИКА — она не будет запускаться по крону."
+
+# ---------------------------------------------------------------------------
+# OperationValidator — messages surfaced via the messenger (Validate Config)
+# ---------------------------------------------------------------------------
+
+msgid "Cannot build Search API table whitelist. Ensure at least one index is configured."
+msgstr "Не удалось построить белый список таблиц Search API. Убедитесь, что настроен хотя бы один индекс."
+
+msgid "All checks passed."
+msgstr "Все проверки пройдены."
+
+msgid "⚠ Custom SQL: write target (if any) is verified against the Search API table whitelist; anything the statement only reads from (JOIN, subqueries, WHERE) is not restricted — verify those manually."
+msgstr "⚠ Произвольный SQL: цель записи (если есть) проверяется по белому списку таблиц Search API; то, что оператор только читает (JOIN, подзапросы, WHERE), не ограничено — проверьте это вручную."
+
+# ---------------------------------------------------------------------------
+# AggregationManager — report detail labels
+# ---------------------------------------------------------------------------
+
+msgid "Main index (main_table / main_column not configured)"
+msgstr "Главный индекс (main_table / main_column не заданы)"
+
+# ---------------------------------------------------------------------------
+# Builder template (builder.html.twig)
+# ---------------------------------------------------------------------------
+
+msgid "Available Fields"
+msgstr "Доступные поля"
+
+msgid "Filter fields…"
+msgstr "Поиск по полям…"
+
+msgid "Connections Builder"
+msgstr "Конструктор связей"
+
+msgid "+ Add Block"
+msgstr "+ Добавить блок"
+
+msgid "Copy JSON"
+msgstr "Копировать JSON"
+
+msgid "Clear All"
+msgstr "Очистить всё"
+
+msgid "Delete block"
+msgstr "Удалить блок"
+
+msgid "Duplicate block"
+msgstr "Дублировать блок"
+
+msgid "Reset to taxonomy defaults"
+msgstr "Сбросить к настройкам таксономии"
+
+msgid "Defaults"
+msgstr "По умолчанию"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Skip deleted"
+msgstr "Пропускать удалённые"
+
+msgid "COALESCE"
+msgstr "COALESCE"
+
+msgid "DISTINCT"
+msgstr "DISTINCT"
+
+msgid "Hierarchy"
+msgstr "Иерархия"
+
+msgid "Show all fields"
+msgstr "Показать все поля"
+
+msgid "Entity col"
+msgstr "Столбец сущности"
+
+msgid "Join table"
+msgstr "Таблица связи"
+
+msgid "Null value"
+msgstr "Значение null"
+
+msgid "Parent col"
+msgstr "Столбец родителя"
+
+msgid "Aggregation suggestions"
+msgstr "Предложения по агрегации"
+
+msgid "Show all tables as target options"
+msgstr "Показать все таблицы как варианты Target"
+
+msgid "All"
+msgstr "Все"
+
+msgid "Create block"
+msgstr "Создать блок"
+
+msgid "Target"
+msgstr "Цель"
+
+msgid "Drag to reorder"
+msgstr "Перетащите для сортировки"
+
+msgid "Live SQL generated from the current builder configuration. {table} notation is Drupal table-prefix convention — actual table prefixes are applied by the database layer at runtime."
+msgstr "Актуальный SQL, генерируемый по текущей конфигурации конструктора. Нотация {table} — соглашение Drupal о префиксах таблиц, фактические префиксы применяются на уровне базы данных в момент выполнения."
+
+msgid "Remove"
+msgstr "Удалить"
+
+msgid "→ Main Column zone (pre-filled)"
+msgstr "→ зона Main Column (заполнено автоматически)"
+
+msgid "⚠ DANGER: reads are unrestricted (any table). The single write target, if any, must be a Search API table — see the help page for supported forms and exact limits."
+msgstr "⚠ ОПАСНО: чтение не ограничено (любая таблица). Единственная цель записи, если она есть, должна быть таблицей Search API — см. страницу справки для поддерживаемых форм и точных ограничений."
+
+msgid "⚠⚠ UNSAFE: NO restriction at all — any table, any command, exactly like a raw database connection. Requires this server to be separately activated via settings.php (see the help page); saving without that will store the block but it will not run."
+msgstr "⚠⚠ НЕБЕЗОПАСНО: ВООБЩЕ никаких ограничений — любая таблица, любая команда, полный эквивалент прямого подключения к базе данных. Требует отдельной активации этого сервера через settings.php (см. страницу справки); сохранение без этого сохранит блок, но он не будет выполняться."
+
+msgid " I understand this statement is not restricted to Search API tables in any way and could destroy data outside this module"
+msgstr " Я понимаю, что этот оператор никак не ограничен таблицами Search API и может уничтожить данные вне этого модуля"
+
+msgid "No fields with 2+ source tables found."
+msgstr "Поля с 2 и более исходными таблицами не найдены."
+
+msgid "Protected column"
+msgstr "Защищённый столбец"
+
+msgid "PRIORITY FILL"
+msgstr "ПРИОРИТЕТНОЕ ЗАПОЛНЕНИЕ"
+
+msgid "Source Columns (priority order)"
+msgstr "Исходные столбцы (в порядке приоритета)"
+
+msgid "INNER"
+msgstr "INNER"
+
+msgid "LEFT"
+msgstr "LEFT"
+
+msgid "Within index"
+msgstr "В рамках индекса"
+
+msgid "Cross-index"
+msgstr "Между индексами"
+
+msgid "— none found —"
+msgstr "— не найдено —"
+
+msgid "✓ Added"
+msgstr "✓ Добавлен"
+
+msgid "No operations configured."
+msgstr "Операции не настроены."
+
+msgid "SQL statement is empty."
+msgstr "SQL-запрос не может быть пустым."
+
+msgid "— pick a target —"
+msgstr "— выберите таблицу —"
+
+msgid "Target (aggregated table)"
+msgstr "Целевая (агрегированная) таблица"
+
+msgid "@n sources"
+msgstr "@n источника(ов)"
+
+msgid "@n tables"
+msgstr "@n таблиц"
+
+msgid "Less"
+msgstr "Свернуть"
+
+msgid "✦ Suggest"
+msgstr "✦ Предложить"
+
+# ---------------------------------------------------------------------------
+# Builder JS (builder.js — Drupal.t() calls)
+# ---------------------------------------------------------------------------
+
+msgid "No fields available."
+msgstr "Нет доступных полей."
+
+msgid "No matching fields."
+msgstr "Поля не найдены."
+
+msgid "Delete this block?"
+msgstr "Удалить этот блок?"
+
+msgid "Remove all blocks? This cannot be undone."
+msgstr "Удалить все блоки? Это действие необратимо."
+
+msgid "Copied!"
+msgstr "Скопировано!"
+
+msgid "Lock"
+msgstr "Заблокировать"
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "⚠ Column not selected — click a column in the left tree"
+msgstr "⚠ Колонка не выбрана — кликните колонку в левом дереве"
+
+# ---------------------------------------------------------------------------
+# Last-run report template (last-run.html.twig)
+# ---------------------------------------------------------------------------
+
+msgid "Last Run"
+msgstr "Последний запуск"
+
+msgid "Total time"
+msgstr "Общее время"
+
+msgid "Operation / Target"
+msgstr "Операция / Цель"
+
+msgid "Result"
+msgstr "Результат"
+
+msgid "Operation"
+msgstr "Операция"
+
+msgid "Rows"
+msgstr "Строки"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "No logs available."
+msgstr "Нет данных о запусках."
+
+# ---------------------------------------------------------------------------
+# Run history template (run-history.html.twig)
+# ---------------------------------------------------------------------------
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Trigger"
+msgstr "Триггер"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Operations"
+msgstr "Операции"
+
+msgid "Errors"
+msgstr "Ошибки"
+
+msgid "No runs recorded yet."
+msgstr "Запусков пока не зафиксировано."
+
+# ---------------------------------------------------------------------------
+# Config status banner & draft mode
+# ---------------------------------------------------------------------------
+
+msgid "Configuration has not been validated yet. Save the form to validate automatically."
+msgstr "Конфигурация ещё не прошла проверку. Сохраните форму для автоматической валидации."
+
+msgid "Configuration is valid and active."
+msgstr "Конфигурация действительна и активна."
+
+msgid "Configuration is in DRAFT mode — validation failed. It will not run on cron."
+msgstr "Конфигурация находится в режиме ЧЕРНОВИКА — проверка не пройдена. Она не будет запущена по крону."
+
+msgid "Configuration is in DRAFT mode (validation failed). Fix the errors shown above and validate before running."
+msgstr "Конфигурация в режиме ЧЕРНОВИКА (проверка не пройдена). Исправьте ошибки, показанные выше, и проверьте перед запуском."
+
+msgid "This configuration has Custom SQL block(s), but this server has not been configured to execute them ($settings['search_api_sql_aggregator_custom_sql_run_key'] is missing or does not match). They will not run until someone with server access sets it — see the module help page."
+msgstr "В этой конфигурации есть блоки Custom SQL, но этот сервер не настроен на их выполнение (значение $settings['search_api_sql_aggregator_custom_sql_run_key'] отсутствует или не совпадает). Они не будут выполняться, пока кто-то с доступом к серверу не установит его — см. страницу справки модуля."
+
+msgid "This configuration has Custom SQL block(s) that are not currently signed and will not run. This usually means they were added or changed while the settings.php creation key ($settings['search_api_sql_aggregator_custom_sql_create_key']) was not present — add it and save this form again to authorise them."
+msgstr "В этой конфигурации есть блоки Custom SQL, которые сейчас не подписаны и не будут выполняться. Обычно это значит, что они были добавлены или изменены, пока ключ создания в settings.php ($settings['search_api_sql_aggregator_custom_sql_create_key']) отсутствовал — добавьте его и сохраните эту форму снова, чтобы их авторизовать."
+
+msgid "This configuration has Unsafe Custom SQL block(s), but the \"Unsafe Custom SQL\" submodule (search_api_sql_aggregator_unsafe) is not installed on this site — they cannot run at all until someone installs it."
+msgstr "В этой конфигурации есть блоки Unsafe Custom SQL, но субмодуль «Unsafe Custom SQL» (search_api_sql_aggregator_unsafe) не установлен на этом сайте — они вообще не смогут выполняться, пока кто-нибудь его не установит."
+
+msgid "This configuration has Unsafe Custom SQL block(s), but this server has not been configured to execute them ($settings['search_api_sql_aggregator_unsafe_custom_sql_run_key'] is missing or does not match). They will not run until someone with server access sets it — see the module help page."
+msgstr "В этой конфигурации есть блоки Unsafe Custom SQL, но этот сервер не настроен на их выполнение (значение $settings['search_api_sql_aggregator_unsafe_custom_sql_run_key'] отсутствует или не совпадает). Они не будут выполняться, пока кто-то с доступом к серверу не установит его — см. страницу справки модуля."
+
+msgid "This configuration has Unsafe Custom SQL block(s) that are not currently signed and will not run. This usually means they were added or changed while the settings.php creation key ($settings['search_api_sql_aggregator_unsafe_custom_sql_create_key']) was not present — add it and save this form again to authorise them."
+msgstr "В этой конфигурации есть блоки Unsafe Custom SQL, которые сейчас не подписаны и не будут выполняться. Обычно это значит, что они были добавлены или изменены, пока ключ создания в settings.php ($settings['search_api_sql_aggregator_unsafe_custom_sql_create_key']) отсутствовал — добавьте его и сохраните эту форму снова, чтобы их авторизовать."
+
+msgid "Configuration saved, but validation failed — it is now in DRAFT mode and will not run on cron. Review the errors shown above and save again."
+msgstr "Конфигурация сохранена, но не прошла проверку — теперь она в режиме ЧЕРНОВИКА и не запускается по крону. Исправьте ошибки выше и сохраните снова."
+
+# ---------------------------------------------------------------------------
+# KeysController + routing.yml/links.task.yml — settings.php keys page
+# ---------------------------------------------------------------------------
+
+msgid "Custom SQL settings.php keys"
+msgstr "Ключи settings.php для Custom SQL"
+
+msgid "settings.php keys"
+msgstr "ключи settings.php"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Copy the exact line(s) below into settings.php on this server. Each value is a deterministic HMAC of the site's hash_salt — recomputing it here always gives the same result, nothing is generated or stored. Placing a value in settings.php requires filesystem/deploy access; that access, not knowledge of the value, is the actual gate. See the <a href=\":help\">module help page</a> for what each key does."
+msgstr "Скопируйте точную строку(и) ниже в settings.php на этом сервере. Каждое значение — детерминированный HMAC от hash_salt сайта: повторное вычисление здесь всегда даёт тот же результат, ничего не генерируется и не хранится. Размещение значения в settings.php требует доступа к файловой системе/деплою; именно этот доступ, а не знание значения, — реальный барьер. См. <a href=\":help\">страницу справки модуля</a>, что делает каждый ключ."
+
+msgid "Custom SQL — creation key"
+msgstr "Custom SQL — ключ создания"
+
+msgid "Temporary — keep in settings.php only while authoring a new/changed Custom SQL block, then remove it."
+msgstr "Временный — держите в settings.php только пока создаёте новый/изменённый блок Custom SQL, затем уберите."
+
+msgid "Custom SQL — run key"
+msgstr "Custom SQL — ключ выполнения"
+
+msgid "Permanent — required for any already-approved Custom SQL block to execute at all."
+msgstr "Постоянный — нужен, чтобы уже одобренный блок Custom SQL вообще мог выполняться."
+
+msgid "Unsafe Custom SQL — creation key"
+msgstr "Unsafe Custom SQL — ключ создания"
+
+msgid "Temporary — keep in settings.php only while authoring a new/changed Unsafe Custom SQL block, then remove it."
+msgstr "Временный — держите в settings.php только пока создаёте новый/изменённый блок Unsafe Custom SQL, затем уберите."
+
+msgid "Unsafe Custom SQL — run key"
+msgstr "Unsafe Custom SQL — ключ выполнения"
+
+msgid "Permanent — required for any already-approved Unsafe Custom SQL block to execute at all."
+msgstr "Постоянный — нужен, чтобы уже одобренный блок Unsafe Custom SQL вообще мог выполняться."
+
+msgid "Key"
+msgstr "Ключ"
+
+msgid "Paste into settings.php"
+msgstr "Вставить в settings.php"
+
+msgid "Currently"
+msgstr "Сейчас"
+
+msgid "You do not hold the Custom SQL or Unsafe Custom SQL permission, so there is nothing to show here."
+msgstr "У вас нет права Custom SQL или Unsafe Custom SQL, поэтому здесь нечего показывать."
+
+msgid "Active (matches settings.php)"
+msgstr "Активен (совпадает с settings.php)"
+
+msgid "Not active"
+msgstr "Не активен"
+
+msgid "The \"settings.php keys\" tab on this page shows the exact current value for both keys (only if you hold the Custom SQL permission), ready to copy — no drush needed. It also shows whether each is currently active. If you prefer drush:"
+msgstr "Вкладка «ключи settings.php» на этой странице показывает точное текущее значение для обоих ключей (только если у вас есть право Custom SQL), готовое к копированию — drush не нужен. Также показывает, активен ли каждый из них сейчас. Если предпочитаете drush:"
+
+msgid "The \"settings.php keys\" tab on this page shows the exact current value for both keys (only if you hold the Unsafe Custom SQL permission AND the submodule is installed), ready to copy — no drush needed. It also shows whether each is currently active. If you prefer drush (submodule must be installed — this reaches its handler service, not a static method on the parent module's class):"
+msgstr "Вкладка «ключи settings.php» на этой странице показывает точное текущее значение для обоих ключей (только если у вас есть право Unsafe Custom SQL И субмодуль установлен), готовое к копированию — drush не нужен. Также показывает, активен ли каждый из них сейчас. Если предпочитаете drush (субмодуль должен быть установлен — это обращение к его сервису-обработчику, а не к статическому методу класса родительского модуля):"
+
+msgid "You hold the Unsafe Custom SQL permission, but the \"Unsafe Custom SQL\" submodule (search_api_sql_aggregator_unsafe) is not installed on this site, so there are no keys to show for it."
+msgstr "У вас есть право Unsafe Custom SQL, но субмодуль «Unsafe Custom SQL» (search_api_sql_aggregator_unsafe) не установлен на этом сайте, поэтому показывать здесь для него нечего."
+
+# ---------------------------------------------------------------------------
+# Builder UI — opt-in secondary-index drop for aggregate sources
+# ---------------------------------------------------------------------------
+
+msgid "index dropped"
+msgstr "снят вторичный ключ"
+
+msgid "Checked (default): this source’s own secondary index on the main table is dropped after this operation runs. Uncheck only if something filters/facets on this specific field directly elsewhere (see the help page)."
+msgstr "Отмечено (по умолчанию): собственный вторичный индекс этого источника на главной таблице снимается после выполнения этой операции. Снимите отметку, только если что-то ещё фильтрует/строит фасет именно по этому полю напрямую (см. страницу справки)."
+
+# ---------------------------------------------------------------------------
+# Schedule validation / interval_trigger migration
+# ---------------------------------------------------------------------------
+
+msgid "Enter the time as HH:MM in 24-hour format, from 00:00 to 23:59."
+msgstr "Укажите время в формате ЧЧ:ММ (24 часа), от 00:00 до 23:59."
+
+msgid "Interval Trigger is already installed; scheduled aggregation runs through it."
+msgstr "Interval Trigger уже установлен; запуски по расписанию идут через него."
+
+msgid "Installed Interval Trigger: scheduled aggregation (cron and page requests) now runs through it."
+msgstr "Установлен Interval Trigger: запуски агрегации по расписанию (cron и запросы страниц) теперь идут через него."
+msgid "Both time-based triggers — cron and <em>Also trigger on page requests</em> — are handled by the Interval Trigger module and share one schedule. Daily and weekly times use the site time zone; a run missed because nothing triggered Drupal at the scheduled time is caught up on the next cron run or visit."
+msgstr "Оба триггера по времени — cron и <em>Также запускать при запросах страниц</em> — обрабатывает модуль Interval Trigger, и расписание у них общее. Ежедневное и еженедельное время считается в часовом поясе сайта; запуск, пропущенный потому, что в назначенное время Drupal никто не дёрнул, выполняется при следующем запуске cron или визите."
+
+msgid "Search API SQL Aggregator — SQLite version"
+msgstr "Search API SQL Aggregator — версия SQLite"
+
+msgid "SQLite @min or later is required (UPDATE … FROM)."
+msgstr "Нужен SQLite @min или новее (UPDATE … FROM)."
+
+msgid "Search API SQL Aggregator — scheduling"
+msgstr "Search API SQL Aggregator — расписание"
+
+msgid "Interval Trigger is not installed: scheduled runs (cron and page requests) are not happening."
+msgstr "Interval Trigger не установлен: запуски по расписанию (cron и запросы страниц) не выполняются."
+
+msgid "Run the pending database updates (<code>drush updatedb</code>); they install it."
+msgstr "Выполните ожидающие обновления базы (<code>drush updatedb</code>) — они его установят."
+
+
+msgid "Not started: another aggregation run is still in progress."
+msgstr "Не запущено: ещё идёт другой запуск агрегации."
+
+msgid "Operations completed with errors — see the run log below."
+msgstr "Операции завершились с ошибками — см. журнал запуска ниже."
+
+msgid "The run failed — see the run log below."
+msgstr "Запуск не удался — см. журнал запуска ниже."
+
+msgid "Pick a target first"
+msgstr "Сначала выберите цель"
+
+msgid "Incomplete block: it is not included in the configuration until the required zones are filled."
+msgstr "Блок не заполнен: он не попадёт в конфигурацию, пока не заполнены обязательные зоны."

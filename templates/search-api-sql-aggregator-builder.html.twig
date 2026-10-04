@@ -1,0 +1,234 @@
+{#
+  Variables:
+    tables_json  — JSON array of {name, label, kind, index_id, index_label, server_id, property_path?, columns[{name,label,type,forbidden}]}
+    servers_json — JSON object {server_id: label}
+    indexes_json — JSON object {index_id: {label, server_id}}
+#}
+<div class="sas-builder-ui"{{ attributes }}>
+
+  {# Embedded JSON data read by builder.js — never rendered as HTML. #}
+  <script type="application/json" class="sas-data-source">{{ tables_json|raw }}</script>
+  <script type="application/json" class="sas-servers-source">{{ servers_json|raw }}</script>
+  <script type="application/json" class="sas-indexes-source">{{ indexes_json|raw }}</script>
+
+  <div class="sas-flex-row">
+
+    <div class="sas-col-left">
+
+      <div class="sas-panel-header">
+        <h3>{{ 'Available Fields'|trans }}</h3>
+        <input type="text" id="sas-search-input" class="sas-search-box"
+               placeholder="{{ 'Filter fields…'|trans }}">
+      </div>
+
+      <div id="sas-filter-bar" class="sas-filter-bar"></div>
+
+      <div id="sas-table-list" class="sas-table-list"></div>
+
+    </div>
+
+    <div class="sas-col-right">
+
+      <div class="sas-panel-header sas-panel-header--actions">
+        <h3>{{ 'Connections Builder'|trans }} <span id="sas-block-count" class="sas-block-count"></span></h3>
+        <div class="sas-header-actions">
+          <button type="button" id="sas-add-block-btn"
+                  class="button button--primary button--small">
+            {{ '+ Add Block'|trans }}
+          </button>
+          <button type="button" id="sas-copy-json-btn"
+                  class="button button--small sas-btn-copy">
+            {{ 'Copy JSON'|trans }}
+          </button>
+          <button type="button" id="sas-clear-all-btn"
+                  class="button button--small sas-btn-clear">
+            {{ 'Clear All'|trans }}
+          </button>
+          <button type="button" id="sas-suggest-btn"
+                  class="button button--small sas-btn-suggest">
+            {{ '✦ Suggest'|trans }}
+          </button>
+        </div>
+      </div>
+
+      <div id="sas-blocks-area"></div>
+
+    </div>
+
+  </div>
+
+  <details class="sas-sql-details" open>
+    <summary>{{ 'SQL Preview'|trans }}</summary>
+    <div class="sas-sql-details-body">
+      <p class="description">
+        {{- 'Live SQL generated from the current builder configuration. {table} notation is Drupal table-prefix convention — actual table prefixes are applied by the database layer at runtime.'|trans -}}
+      </p>
+      <pre class="sas-sql-preview"></pre>
+    </div>
+  </details>
+
+  {# Templates cloned by builder.js; JS only fills text and attributes. #}
+  <template id="sas-tpl-empty">
+    <div class="sas-list-empty"></div>
+  </template>
+
+  <template id="sas-tpl-tree-item">
+    <div class="sas-tree-item">
+      <div class="sas-tree-header">
+        <span class="sas-tree-toggle"></span>
+        <div class="sas-tree-info">
+          <div class="sas-field-label"><span class="sas-fl-name"></span></div>
+          <div class="sas-table-name"></div>
+        </div>
+      </div>
+      <div class="sas-tree-columns"></div>
+    </div>
+  </template>
+
+  <template id="sas-tpl-col-item">
+    <div class="sas-col-item">
+      <span class="sas-col-name"></span>
+      <span class="sas-col-type"></span>
+    </div>
+  </template>
+
+  <template id="sas-tpl-col-lock">
+    <span class="sas-col-lock" title="{{ 'Protected column'|trans }}">&#128274;</span>
+  </template>
+
+  <template id="sas-tpl-tree-path">
+    <div class="sas-tree-path">
+      <span class="sas-tree-path-label">path</span>
+      <span class="sas-tree-path-value"></span>
+    </div>
+  </template>
+
+  <template id="sas-tpl-zone-item">
+    <li class="sas-list-item">
+      <span class="sas-item-name"></span>
+      <label class="sas-item-drop-index-label" hidden title="{{ 'Checked (default): this source’s own secondary index on the main table is dropped after this operation runs. Uncheck only if something filters/facets on this specific field directly elsewhere (see the help page).'|trans }}">
+        <input type="checkbox" class="sas-item-drop-index-toggle">
+        {{ 'index dropped'|trans }}
+      </label>
+      <button type="button" class="sas-item-remove" title="{{ 'Remove'|trans }}">&#215;</button>
+    </li>
+  </template>
+
+  <template id="sas-tpl-zone">
+    <div class="sas-drop-zone">
+      <h4></h4>
+      <ul class="sas-item-list"></ul>
+    </div>
+  </template>
+
+  {# No wrapper: both nodes become direct children of .sas-block-content. #}
+  <template id="sas-tpl-custom-sql">
+    <div class="sas-custom-sql-warning">
+      {{- '⚠ DANGER: reads are unrestricted (any table). The single write target, if any, must be a Search API table — see the help page for supported forms and exact limits.'|trans -}}
+    </div>
+    <textarea class="sas-custom-sql-input" rows="5" placeholder="UPDATE {search_api_db_my_index} SET field_label = (SELECT name FROM taxonomy_term_field_data WHERE tid = field_tid)"></textarea>
+  </template>
+
+  {# No wrapper: both nodes become direct children of .sas-block-content. #}
+  <template id="sas-tpl-custom-sql-unsafe">
+    <div class="sas-custom-sql-warning sas-custom-sql-warning--unsafe">
+      {{- '⚠⚠ UNSAFE: NO restriction at all — any table, any command, exactly like a raw database connection. Requires this server to be separately activated via settings.php (see the help page); saving without that will store the block but it will not run.'|trans -}}
+    </div>
+    <textarea class="sas-custom-sql-unsafe-input" rows="5" placeholder="DROP TABLE some_table"></textarea>
+    <label class="sas-custom-sql-unsafe-confirm-label">
+      <input type="checkbox" class="sas-custom-sql-unsafe-confirm">
+      {{- ' I understand this statement is not restricted to Search API tables in any way and could destroy data outside this module'|trans -}}
+    </label>
+  </template>
+
+  <template id="sas-tpl-block">
+    <div class="sas-block">
+      <div class="sas-block-header">
+        <span class="sas-drag-handle" title="{{ 'Drag to reorder'|trans }}">&#8801;</span>
+        <span class="sas-op-badge"></span>
+        <div class="sas-block-controls">
+          <select class="sas-op-type-select"></select>
+          <label class="sas-hier-label" hidden><input type="checkbox" class="sas-hier-toggle"> {{ 'Hierarchy'|trans }}</label>
+          <select class="sas-join-type-select sas-op-type-select" hidden></select>
+          <label class="sas-hier-label sas-coalesce-label" hidden><input type="checkbox" class="sas-coalesce-toggle"> {{ 'COALESCE'|trans }}</label>
+          <label class="sas-hier-label sas-distinct-label" hidden><input type="checkbox" class="sas-distinct-toggle"> {{ 'DISTINCT'|trans }}</label>
+          <select class="sas-agg-func-select" hidden></select>
+          <button type="button" class="button button--small sas-dup-btn" title="{{ 'Duplicate block'|trans }}">&#10697;</button>
+          <button type="button" class="button button--small sas-del-btn" title="{{ 'Delete block'|trans }}">&#215;</button>
+        </div>
+      </div>
+      <div class="sas-hier-config" hidden>
+        <div class="sas-hier-config-inner">
+          <label>{{ 'Join table'|trans }}<input type="text" class="sas-hier-table"></label>
+          <label>{{ 'Entity col'|trans }}<input type="text" class="sas-hier-entity-col"></label>
+          <label>{{ 'Parent col'|trans }}<input type="text" class="sas-hier-parent-col"></label>
+          <label>{{ 'Null value'|trans }}<input type="text" class="sas-hier-null-value"></label>
+          <label class="sas-hier-inline"><input type="checkbox" class="sas-hier-check-deleted"> {{ 'Skip deleted'|trans }}</label>
+          <button type="button" class="button button--small sas-hier-reset" title="{{ 'Reset to taxonomy defaults'|trans }}">&#8635; {{ 'Defaults'|trans }}</button>
+        </div>
+      </div>
+      <div class="sas-block-content"></div>
+    </div>
+  </template>
+
+  <template id="sas-tpl-suggest-panel">
+    <div class="sas-suggest-panel">
+      <div class="sas-suggest-header">
+        <div class="sas-suggest-header-left">
+          <strong>{{ 'Aggregation suggestions'|trans }}</strong>
+          <div class="sas-suggest-mode-toggle">
+            <button type="button" class="sas-suggest-mode-btn" data-mode="mono">{{ 'Within index'|trans }}</button>
+            <button type="button" class="sas-suggest-mode-btn" data-mode="multi">{{ 'Cross-index'|trans }}</button>
+          </div>
+        </div>
+        <div class="sas-suggest-header-right">
+          <label class="sas-suggest-show-all-label"><input type="checkbox" class="sas-suggest-show-all-chk"> {{ 'Show all fields'|trans }}</label>
+          <button type="button" class="sas-suggest-close" title="{{ 'Close'|trans }}">&#215;</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="sas-tpl-suggest-filter-bar">
+    <div class="sas-suggest-filter-bar"></div>
+  </template>
+
+  <template id="sas-tpl-suggest-filter-tab">
+    <button type="button" class="sas-suggest-filter-tab"></button>
+  </template>
+
+  <template id="sas-tpl-suggest-empty">
+    <p class="sas-suggest-empty">{{ 'No fields with 2+ source tables found.'|trans }}</p>
+  </template>
+
+  <template id="sas-tpl-suggest-group">
+    <div class="sas-suggest-group">
+      <div class="sas-suggest-group-head">
+        <code class="sas-suggest-group-last"></code>
+        <span class="sas-suggest-count"></span>
+      </div>
+      <div class="sas-suggest-sources"></div>
+      <div class="sas-suggest-target-row">
+        <label>{{ 'Target'|trans }}:&nbsp;<select class="sas-suggest-target-sel"></select></label>
+        <button type="button" class="button button--extrasmall sas-suggest-expand-target" title="{{ 'Show all tables as target options'|trans }}">{{ 'All'|trans }}</button>
+        <button type="button" class="button button--small button--primary sas-suggest-create">{{ 'Create block'|trans }}</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="sas-tpl-suggest-source-row">
+    <div class="sas-suggest-source-row">
+      <code class="sas-suggest-table-name"></code>
+      <span class="sas-suggest-path"></span>
+    </div>
+  </template>
+
+  <template id="sas-tpl-suggest-main-hint">
+    <div class="sas-suggest-main-hint">
+      <span class="sas-kind-badge sas-kind-badge--main">main</span>
+      <code class="sas-suggest-main-hint-name"></code>
+      <span class="sas-suggest-main-hint-note">{{ '→ Main Column zone (pre-filled)'|trans }}</span>
+    </div>
+  </template>
+
+</div>

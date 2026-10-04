@@ -1,0 +1,10 @@
+{
+    "name": "kerisargit/search_api_sql_aggregator",
+    "type": "drupal-custom-module",
+    "description": "Runs configurable SQL operations against Search API Database backend tables.",
+    "require": {
+        "php": ">=8.1",
+        "drupal/core": "^10",
+        "drupal/search_api": "^1.14"
+    }
+}

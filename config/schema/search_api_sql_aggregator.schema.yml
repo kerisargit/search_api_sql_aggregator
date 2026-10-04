@@ -1,0 +1,49 @@
+search_api_sql_aggregator.settings:
+  type: config_object
+  label: 'Search API SQL Aggregator settings'
+  mapping:
+    time_limit:
+      type: integer
+      label: 'PHP time limit (seconds)'
+    sql_time_limit:
+      type: integer
+      label: 'SQL query timeout (milliseconds)'
+    json_config:
+      type: string
+      label: 'Operations configuration (JSON array of operation objects)'
+    run_on_cron:
+      type: boolean
+      label: 'Run aggregation on cron'
+    trigger_on_request:
+      type: boolean
+      label: 'Also trigger aggregation on page requests'
+    trigger_on_index_complete:
+      type: boolean
+      label: 'Also trigger aggregation after Search API finishes indexing'
+    schedule_type:
+      type: string
+      label: 'Schedule type (interval | daily | weekly)'
+    schedule_interval:
+      type: integer
+      label: 'Interval between runs (seconds)'
+    schedule_time:
+      type: string
+      label: 'Server time of day for daily/weekly runs (HH:MM)'
+    schedule_day_of_week:
+      type: integer
+      label: 'Day of week for weekly runs (0 = Sunday … 6 = Saturday)'
+    config_valid:
+      type: boolean
+      label: 'Whether the saved configuration passed validation (not draft)'
+    config_validation_errors:
+      type: sequence
+      label: 'Validation errors from the last save/validate'
+      sequence:
+        type: string
+        label: 'Error message'
+    custom_sql_signature:
+      type: string
+      label: 'HMAC (site hash_salt) over the custom_sql block content, set only by a save that passed the Custom SQL permission check'
+    custom_sql_unsafe_signature:
+      type: string
+      label: 'HMAC (site hash_salt) over the custom_sql_unsafe block content, set only by a save that passed the Unsafe Custom SQL permission check while the settings.php creation key was present'

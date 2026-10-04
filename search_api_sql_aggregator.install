@@ -1,0 +1,214 @@
+<?php
+
+/**
+ * @file
+ * Install, update and requirements hooks for Search API SQL Aggregator.
+ */
+
+use Drupal\Core\Site\Settings;
+use Drupal\Core\Url;
+use Drupal\search_api_sql_aggregator\Service\OperationValidator;
+use Drupal\search_api_sql_aggregator\Service\AggregationManager;
+
+// Copy of OperationValidator::SQLITE_MINIMUM_VERSION: module classes are not
+// autoloadable yet during hook_requirements('install').
+const SEARCH_API_SQL_AGGREGATOR_SQLITE_MINIMUM_VERSION = '3.33.0';
+
+/**
+ * Implements hook_requirements().
+ */
+function search_api_sql_aggregator_requirements($phase) {
+  $requirements = [];
+
+  $database = \Drupal::database();
+  if ($database->driver() === 'sqlite'
+    && version_compare($database->version(), SEARCH_API_SQL_AGGREGATOR_SQLITE_MINIMUM_VERSION, '<')) {
+    $requirements['search_api_sql_aggregator_sqlite_version'] = [
+      'title'       => t('Search API SQL Aggregator — SQLite version'),
+      'value'       => $database->version(),
+      'description' => t('SQLite @min or later is required (UPDATE … FROM).', ['@min' => SEARCH_API_SQL_AGGREGATOR_SQLITE_MINIMUM_VERSION]),
+      'severity'    => REQUIREMENT_ERROR,
+    ];
+  }
+
+  if ($phase !== 'runtime') {
+    return $requirements;
+  }
+
+  if (!\Drupal::moduleHandler()->moduleExists('interval_trigger')) {
+    $requirements['search_api_sql_aggregator_interval_trigger'] = [
+      'title'       => t('Search API SQL Aggregator — scheduling'),
+      'value'       => t('Interval Trigger is not installed: scheduled runs (cron and page requests) are not happening.'),
+      'description' => t('Run the pending database updates (<code>drush updatedb</code>); they install it.'),
+      'severity'    => REQUIREMENT_ERROR,
+    ];
+  }
+
+  $config = \Drupal::config('search_api_sql_aggregator.settings');
+  $state  = \Drupal::state();
+  /** @var \Drupal\Core\Datetime\DateFormatterInterface $date_formatter */
+  $date_formatter = \Drupal::service('date.formatter');
+
+  $blocks = AggregationManager::decodeBlocks($config->get('json_config'));
+
+  if (empty($blocks)) {
+    $requirements['search_api_sql_aggregator_config'] = [
+      'title'    => t('Search API SQL Aggregator'),
+      'value'    => t('No operations configured'),
+      'severity' => REQUIREMENT_INFO,
+    ];
+  }
+  elseif (!$config->get('config_valid')) {
+    $errors = $config->get('config_validation_errors') ?? [];
+    $requirements['search_api_sql_aggregator_config'] = [
+      'title'       => t('Search API SQL Aggregator'),
+      'value'       => t('Configuration is in DRAFT mode (@n operation(s), validation failed)', ['@n' => count($blocks)]),
+      'description' => t('The saved configuration failed validation and will not run on cron. First error: @msg', [
+        '@msg' => is_array($errors) && !empty($errors) ? reset($errors) : t('unknown'),
+      ]),
+      'severity'    => REQUIREMENT_WARNING,
+    ];
+  }
+  else {
+    $requirements['search_api_sql_aggregator_config'] = [
+      'title'    => t('Search API SQL Aggregator'),
+      'value'    => $config->get('run_on_cron')
+        ? t('@n operation(s) configured, cron scheduling enabled', ['@n' => count($blocks)])
+        : t('@n operation(s) configured, cron scheduling disabled', ['@n' => count($blocks)]),
+      'severity' => REQUIREMENT_OK,
+    ];
+  }
+
+  if (!empty($blocks)) {
+    $reason = \Drupal::service('search_api_sql_aggregator.manager')->unavailableReason();
+    if ($reason !== NULL) {
+      $requirements['search_api_sql_aggregator_backend'] = [
+        'title'       => t('Search API SQL Aggregator — nothing to run on'),
+        'value'       => t('Scheduled runs are paused.'),
+        'description' => $reason,
+        'severity'    => REQUIREMENT_WARNING,
+      ];
+    }
+  }
+
+  $last_run = $state->get('search_api_sql_aggregator.last_run');
+  if (is_array($last_run) && !empty($last_run['timestamp'])) {
+    $status_map = [
+      'SUCCESS' => REQUIREMENT_OK,
+      'WARNING' => REQUIREMENT_WARNING,
+      'ERROR'   => REQUIREMENT_ERROR,
+    ];
+    $status = $last_run['status'] ?? 'ERROR';
+    $requirements['search_api_sql_aggregator_last_run'] = [
+      'title'    => t('Search API SQL Aggregator — last run'),
+      'value'    => t('@status at @date', [
+        '@status' => $status,
+        '@date'   => $date_formatter->format((int) $last_run['timestamp'], 'medium'),
+      ]),
+      'severity' => $status_map[$status] ?? REQUIREMENT_ERROR,
+    ];
+    if ($status !== 'SUCCESS') {
+      $requirements['search_api_sql_aggregator_last_run']['description'] =
+        t('See the run log on the <a href=":url">SQL Aggregator settings page</a>.', [
+          ':url' => Url::fromRoute('search_api_sql_aggregator.settings')->toString(),
+        ]);
+    }
+  }
+
+  /** @var \Drupal\search_api_sql_aggregator\Service\AggregationManager $manager */
+  $manager = \Drupal::service('search_api_sql_aggregator.manager');
+
+  $custom_sql_count = 0;
+  $custom_sql_unsafe_count = 0;
+  foreach ($blocks as $block) {
+    if (!is_array($block)) {
+      continue;
+    }
+    if (($block['type'] ?? NULL) === 'custom_sql') {
+      $custom_sql_count++;
+    }
+    elseif (($block['type'] ?? NULL) === 'custom_sql_unsafe') {
+      $custom_sql_unsafe_count++;
+    }
+  }
+  if ($custom_sql_count > 0) {
+    $disabled_by_settings = Settings::get('search_api_sql_aggregator_allow_custom_sql', FALSE) !== TRUE;
+    $custom_sql_value = $disabled_by_settings
+      ? t('@n Custom SQL block(s) configured, but Custom SQL is disabled in settings.php — these blocks will fail at run time', ['@n' => $custom_sql_count])
+      : ($manager->customSqlRunKeyMatches()
+        ? t('@n Custom SQL block(s) configured — write target checked against the Search API whitelist, reads are unrestricted', ['@n' => $custom_sql_count])
+        : t('@n Custom SQL block(s) configured, but this server has not activated execution (settings.php run key not set) — these blocks will not run', ['@n' => $custom_sql_count]));
+    $requirements['search_api_sql_aggregator_custom_sql'] = [
+      'title'    => t('Search API SQL Aggregator — Custom SQL'),
+      'value'    => $custom_sql_value,
+      'severity' => REQUIREMENT_WARNING,
+    ];
+  }
+  $unsafeHandler = $manager->getUnsafeCustomSqlHandler();
+  if ($custom_sql_unsafe_count > 0) {
+    if (!$unsafeHandler) {
+      $requirements['search_api_sql_aggregator_custom_sql_unsafe'] = [
+        'title'    => t('Search API SQL Aggregator — Unsafe Custom SQL'),
+        'value'    => t('@n Unsafe Custom SQL block(s) configured, but the "Unsafe Custom SQL" submodule (search_api_sql_aggregator_unsafe) is not installed — these blocks cannot run at all until it is installed', ['@n' => $custom_sql_unsafe_count]),
+        'severity' => REQUIREMENT_WARNING,
+      ];
+    }
+    else {
+      $active = $unsafeHandler->runKeyMatches();
+      $requirements['search_api_sql_aggregator_custom_sql_unsafe'] = [
+        'title'    => t('Search API SQL Aggregator — Unsafe Custom SQL'),
+        'value'    => $active
+          ? t('@n Unsafe Custom SQL block(s) configured AND ACTIVE on this server — no table/command restriction at all', ['@n' => $custom_sql_unsafe_count])
+          : t('@n Unsafe Custom SQL block(s) configured, but this server has not activated execution (settings.php run key not set) — these blocks will not run', ['@n' => $custom_sql_unsafe_count]),
+        'severity' => $active ? REQUIREMENT_ERROR : REQUIREMENT_WARNING,
+      ];
+    }
+  }
+
+  $lingering = [];
+  if ($manager->customSqlCreateKeyMatches()) {
+    $lingering[] = t('Custom SQL (search_api_sql_aggregator_custom_sql_create_key)');
+  }
+  if ($unsafeHandler && $unsafeHandler->createKeyMatches()) {
+    $lingering[] = t('Unsafe Custom SQL (search_api_sql_aggregator_unsafe_custom_sql_create_key)');
+  }
+  if (!empty($lingering)) {
+    $requirements['search_api_sql_aggregator_lingering_create_key'] = [
+      'title'    => t('Search API SQL Aggregator — creation key left in settings.php'),
+      'value'    => t('The following creation key(s) are meant to be temporary (present only while authoring a new/changed block) but are still configured: @list. Remove the ones no longer in active use from settings.php — leaving them in place indefinitely defeats their purpose.', ['@list' => implode('; ', $lingering)]),
+      'severity' => REQUIREMENT_WARNING,
+    ];
+  }
+
+  $driver = \Drupal::database()->driver();
+  $supported = OperationValidator::SUPPORTED_DRIVERS;
+  $requirements['search_api_sql_aggregator_driver'] = [
+    'title'    => t('Search API SQL Aggregator — database driver'),
+    'value'    => in_array($driver, $supported, TRUE)
+      ? t('@driver (supported)', ['@driver' => $driver])
+      : t('@driver — NOT supported, operations will be refused', ['@driver' => $driver]),
+    'severity' => in_array($driver, $supported, TRUE) ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+  ];
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function search_api_sql_aggregator_uninstall() {
+  \Drupal::configFactory()->getEditable('search_api_sql_aggregator.settings')->delete();
+  \Drupal::state()->delete('search_api_sql_aggregator.last_run');
+  \Drupal::state()->delete('search_api_sql_aggregator.run_history');
+}
+
+/**
+ * Installs Interval Trigger, which now runs scheduled aggregation.
+ */
+function search_api_sql_aggregator_update_10001() {
+  if (\Drupal::moduleHandler()->moduleExists('interval_trigger')) {
+    return t('Interval Trigger is already installed; scheduled aggregation runs through it.');
+  }
+  \Drupal::service('module_installer')->install(['interval_trigger']);
+  return t('Installed Interval Trigger: scheduled aggregation (cron and page requests) now runs through it.');
+}

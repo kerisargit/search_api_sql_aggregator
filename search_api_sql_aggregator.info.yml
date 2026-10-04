@@ -1,0 +1,11 @@
+name: 'Search API SQL Aggregator'
+type: module
+description: 'Runs configurable SQL operations (aggregate, copy, null-reset, fill-from-union, priority-fill) against Search API Database backend tables for high-performance hierarchical facets and data aggregation.'
+package: 'Search'
+core_version_requirement: ^10
+version: 1.0.0
+dependencies:
+  - search_api:search_api
+  - drupal:taxonomy
+  - interval_trigger:interval_trigger
+configure: search_api_sql_aggregator.settings

@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * @file
+ * Search API SQL Aggregator.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_help().
+ */
+function search_api_sql_aggregator_help($route_name, RouteMatchInterface $route_match) {
+  if ($route_name !== 'help.page.search_api_sql_aggregator') {
+    return;
+  }
+
+  return [
+    '#theme'        => 'search_api_sql_aggregator_help',
+    '#settings_url' => Url::fromRoute('search_api_sql_aggregator.settings')->toString(),
+  ];
+}
+
+/**
+ * Implements hook_theme().
+ */
+function search_api_sql_aggregator_theme() {
+  return [
+    'search_api_sql_aggregator_help' => [
+      'variables' => [
+        'settings_url' => NULL,
+      ],
+    ],
+    'search_api_sql_aggregator_last_run' => [
+      'variables' => [
+        'status'     => NULL,
+        'date'       => NULL,
+        'total_time' => NULL,
+        'trigger'    => NULL,
+        'logs'       => [],
+      ],
+    ],
+    'search_api_sql_aggregator_builder' => [
+      'variables' => [
+        'tables_json'  => '[]',
+        'servers_json' => '{}',
+        'indexes_json' => '{}',
+      ],
+    ],
+    'search_api_sql_aggregator_config_status' => [
+      'variables' => [
+        'valid'  => NULL,
+        'errors' => [],
+      ],
+    ],
+    'search_api_sql_aggregator_run_history' => [
+      'variables' => [
+        'runs' => [],
+      ],
+    ],
+  ];
+}

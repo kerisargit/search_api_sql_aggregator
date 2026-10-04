@@ -1,0 +1,25 @@
+{#
+  Variables:
+    valid  — null (never validated) | true (valid) | false (draft/invalid)
+    errors — array of plain-text error strings (auto-escaped by Twig)
+#}
+{% if valid is same as(null) %}
+  <div class="messages messages--warning">
+    {{ 'Configuration has not been validated yet. Save the form to validate automatically.'|trans }}
+  </div>
+{% elseif valid %}
+  <div class="messages messages--status">
+    {{ 'Configuration is valid and active.'|trans }}
+  </div>
+{% else %}
+  <div class="messages messages--error">
+    <strong>{{ 'Configuration is in DRAFT mode — validation failed. It will not run on cron.'|trans }}</strong>
+    {% if errors %}
+      <ul>
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endif %}

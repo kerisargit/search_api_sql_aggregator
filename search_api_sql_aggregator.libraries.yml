@@ -1,0 +1,9 @@
+builder:
+  version: 1.0
+  css:
+    theme:
+      css/builder.css: {}
+  js:
+    js/builder.js: {}
+  dependencies:
+    - core/drupal

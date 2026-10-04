@@ -1,0 +1,56 @@
+{#
+  Variables:
+    runs — list of compact per-run summaries, newest first:
+           {date, status (SUCCESS|WARNING|ERROR), trigger (manual|cron|request),
+            ops, errors, total_time}
+#}
+{% if runs %}
+  <table class="sas-history-table">
+    <thead>
+      <tr>
+        <th>{{ 'Date'|trans }}</th>
+        <th>{{ 'Trigger'|trans }}</th>
+        <th>{{ 'Status'|trans }}</th>
+        <th>{{ 'Operations'|trans }}</th>
+        <th>{{ 'Errors'|trans }}</th>
+        <th>{{ 'Total time'|trans }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+        <tr>
+          <td class="sas-history-date">{{ run.date }}</td>
+          <td>
+            <span class="sas-trigger-badge sas-trigger-badge--{{ run.trigger }}">{{ run.trigger }}</span>
+          </td>
+          <td>
+            {% if run.status == 'SUCCESS' %}
+              <span class="sas-status-badge sas-status-badge--ok sas-status-badge--small">SUCCESS</span>
+            {% elseif run.status == 'WARNING' %}
+              <span class="sas-status-badge sas-status-badge--warn sas-status-badge--small">WARNING</span>
+            {% else %}
+              <span class="sas-status-badge sas-status-badge--err sas-status-badge--small">ERROR</span>
+            {% endif %}
+          </td>
+          <td>{{ run.ops }}</td>
+          <td>
+            {% if run.errors > 0 %}
+              <strong class="sas-history-errors">{{ run.errors }}</strong>
+            {% else %}
+              <span class="sas-muted">0</span>
+            {% endif %}
+          </td>
+          <td class="sas-muted">
+            {%- if run.total_time is not null and run.total_time != '' -%}
+              {{ run.total_time }}s
+            {%- else -%}
+              &mdash;
+            {%- endif -%}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div class="sas-list-empty">{{ 'No runs recorded yet.'|trans }}</div>
+{% endif %}

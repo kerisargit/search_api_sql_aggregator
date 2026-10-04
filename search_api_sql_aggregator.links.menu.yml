@@ -1,0 +1,6 @@
+search_api_sql_aggregator.settings:
+  title: 'Search API SQL Aggregator'
+  description: 'Configure direct SQL aggregation rules for facets.'
+  parent: system.admin_config_search
+  route_name: search_api_sql_aggregator.settings
+  weight: 10
