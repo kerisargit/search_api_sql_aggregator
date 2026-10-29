@@ -30,6 +30,18 @@ Upgrading an existing site: deploy the code, then run `drush updatedb` —
 `search_api_sql_aggregator_update_10001()` installs Interval Trigger. Until then
 no scheduled runs happen, and the status report says so.
 
+## Multi-valued targets
+
+`search_api_db` filters a field through its own table only when the field is
+flagged `multi-valued` in the `search_api_db.indexes` key-value store;
+otherwise it compares against the single column in the index table. The
+backend sets that flag only while indexing, from the raw values, and "Clear all
+indexed data" removes it. After an aggregate operation leaves more than one
+row for some item in the target table, the module sets the flag on the field
+that owns that table (shown as a `FLAG` line in the run log). It never clears
+the flag. Without it, facet counts (always read from the field table) would
+not match the results of clicking the facet.
+
 ## Tests
 
 ```

@@ -75,7 +75,9 @@ class AggregationManagerExecutionTest extends KernelTestBase {
       $this->container->get('state'),
       $this->container->get('lock'),
       $entityTypeManager,
-      $validator
+      $validator,
+      NULL,
+      $this->container->get('keyvalue')
     );
 
     $this->createTestSchema();
@@ -360,6 +362,97 @@ class AggregationManagerExecutionTest extends KernelTestBase {
     $secondCount = count($this->fetchAll(self::T_AGG));
 
     $this->assertSame($firstCount, $secondCount, 'Re-running aggregate must produce identical result.');
+  }
+
+  private function setIndexDbInfo(string $indexId, array $fieldTables): void {
+    $this->container->get('keyvalue')->get('search_api_db.indexes')->set($indexId, [
+      'server'       => 'default',
+      'index_table'  => self::T_MAIN,
+      'field_tables' => $fieldTables,
+    ]);
+  }
+
+  private function getFieldTables(string $indexId): array {
+    return $this->container->get('keyvalue')->get('search_api_db.indexes')->get($indexId)['field_tables'];
+  }
+
+  private function aggregateIntoAgg(): array {
+    return $this->runAggregation([[
+      'type'          => 'aggregate',
+      'target_table'  => self::T_AGG,
+      'source_tables' => [self::T_FIELD_A, self::T_FIELD_B],
+      'options'       => ['hierarchy' => FALSE],
+    ]]);
+  }
+
+  public function testAggregateMarksTargetMultiValuedWhenItemGetsSeveralValues(): void {
+    $this->setIndexDbInfo('test', [
+      'field_a'   => ['table' => self::T_FIELD_A, 'column' => 'field_a', 'type' => 'integer'],
+      'field_agg' => ['table' => self::T_AGG, 'column' => 'field_agg', 'type' => 'integer'],
+    ]);
+    $this->insertRows(self::T_FIELD_A, [['entity:node/1', 10]]);
+    $this->insertRows(self::T_FIELD_B, [['entity:node/1', 20]]);
+
+    $state = $this->aggregateIntoAgg();
+
+    $this->assertSame('SUCCESS', $state['status']);
+    $tables = $this->getFieldTables('test');
+    $this->assertTrue($tables['field_agg']['multi-valued'] ?? FALSE);
+    $this->assertArrayNotHasKey('multi-valued', $tables['field_a'], 'Only the target field is touched.');
+    $ops = array_column($state['log'][0]['details'], 'op');
+    $this->assertContains('FLAG', $ops);
+  }
+
+  public function testAggregateLeavesFlagAloneWhenEveryItemHasOneValue(): void {
+    $this->setIndexDbInfo('test', [
+      'field_agg' => ['table' => self::T_AGG, 'column' => 'field_agg', 'type' => 'integer'],
+    ]);
+    $this->insertRows(self::T_FIELD_A, [['entity:node/1', 10]]);
+    $this->insertRows(self::T_FIELD_B, [['entity:node/2', 20], ['entity:node/1', 10]]);
+
+    $state = $this->aggregateIntoAgg();
+
+    $this->assertSame('SUCCESS', $state['status']);
+    $this->assertArrayNotHasKey('multi-valued', $this->getFieldTables('test')['field_agg']);
+    $this->assertNotContains('FLAG', array_column($state['log'][0]['details'], 'op'));
+  }
+
+  public function testAggregateNeverClearsAnExistingMultiValuedFlag(): void {
+    $this->setIndexDbInfo('test', [
+      'field_agg' => ['table' => self::T_AGG, 'column' => 'field_agg', 'type' => 'integer', 'multi-valued' => TRUE],
+    ]);
+    $this->insertRows(self::T_FIELD_A, [['entity:node/1', 10]]);
+
+    $this->aggregateIntoAgg();
+
+    $this->assertTrue($this->getFieldTables('test')['field_agg']['multi-valued']);
+  }
+
+  public function testAggregateFlagsOnlyTheIndexThatOwnsTheTargetTable(): void {
+    $this->setIndexDbInfo('test', [
+      'field_agg' => ['table' => self::T_AGG, 'column' => 'field_agg', 'type' => 'integer'],
+    ]);
+    $this->setIndexDbInfo('other', [
+      'field_agg' => ['table' => 'search_api_db_other_field_agg', 'column' => 'field_agg', 'type' => 'integer'],
+    ]);
+    $this->insertRows(self::T_FIELD_A, [['entity:node/1', 10]]);
+    $this->insertRows(self::T_FIELD_B, [['entity:node/1', 20]]);
+
+    $this->aggregateIntoAgg();
+
+    $this->assertTrue($this->getFieldTables('test')['field_agg']['multi-valued'] ?? FALSE);
+    $this->assertArrayNotHasKey('multi-valued', $this->getFieldTables('other')['field_agg']);
+  }
+
+  public function testAggregateWithoutSearchApiDbInfoStillSucceeds(): void {
+    $this->insertRows(self::T_FIELD_A, [['entity:node/1', 10]]);
+    $this->insertRows(self::T_FIELD_B, [['entity:node/1', 20]]);
+
+    $state = $this->aggregateIntoAgg();
+
+    $this->assertSame('SUCCESS', $state['status']);
+    $this->assertSame(2, (int) $this->db->query('SELECT COUNT(*) FROM {' . self::T_AGG . '}')->fetchField());
+    $this->assertNotContains('FLAG', array_column($state['log'][0]['details'], 'op'));
   }
 
   public function testFillFromUnionMin(): void {

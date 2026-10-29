@@ -6,6 +6,7 @@ use Drupal\Core\Database\Transaction;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\Core\State\StateInterface;
@@ -30,6 +31,8 @@ class AggregationManager {
 
   public const RUN_HISTORY_MAX = 20;
 
+  private const SEARCH_API_DB_KEY_VALUE_COLLECTION = 'search_api_db.indexes';
+
   private const MYSQL_SECONDARY_INDEX_WARNING_THRESHOLD = 55;
 
   protected $database;
@@ -48,6 +51,8 @@ class AggregationManager {
    */
   protected $unsafeHandler;
 
+  protected ?KeyValueFactoryInterface $keyValueFactory;
+
   public function __construct(
     Connection $database,
     LoggerChannelFactoryInterface $logger_factory,
@@ -55,7 +60,8 @@ class AggregationManager {
     LockBackendInterface $lock,
     EntityTypeManagerInterface $entity_type_manager,
     OperationValidator $validator,
-    ?UnsafeCustomSqlHandlerInterface $unsafe_handler = NULL
+    ?UnsafeCustomSqlHandlerInterface $unsafe_handler = NULL,
+    ?KeyValueFactoryInterface $key_value_factory = NULL
   ) {
     $this->database          = $database;
     $this->logger            = $logger_factory->get('search_api_sql_aggregator');
@@ -64,6 +70,7 @@ class AggregationManager {
     $this->entityTypeManager = $entity_type_manager;
     $this->validator         = $validator;
     $this->unsafeHandler     = $unsafe_handler;
+    $this->keyValueFactory   = $key_value_factory;
     $this->sql               = new SqlBuilder($database);
     $this->sessionTimeout    = new SessionTimeout($database, $this->logger);
   }
@@ -616,6 +623,10 @@ class AggregationManager {
       ];
     }
 
+    if ($detail = $this->flagMultiValuedTarget($targetTable)) {
+      $details[] = $detail;
+    }
+
     $dropIndexFor = (array) ($options['drop_index_for_sources'] ?? []);
     if ($dropIndexFor) {
       // Commit first: DROP INDEX implicitly commits on MySQL/MariaDB anyway,
@@ -916,6 +927,60 @@ class AggregationManager {
     // transaction is aborted" instead of the real error.
     $stmt->execute();
     return (int) $stmt->rowCount();
+  }
+
+  /**
+   * Marks the field stored in $table as multi-valued for search_api_db.
+   *
+   * The backend sets this flag only while indexing, from the raw values.
+   * Without it, filters on the field use the single denormalized column and
+   * miss every value aggregate added beyond the first.
+   */
+  protected function flagMultiValuedTarget(string $table): ?array {
+    if (!$this->keyValueFactory) {
+      return NULL;
+    }
+    $t = microtime(TRUE);
+    try {
+      $hasMultiple = (bool) $this->database
+        ->queryRange("SELECT item_id FROM {{$table}} GROUP BY item_id HAVING COUNT(*) > 1", 0, 1)
+        ->fetchField();
+      if (!$hasMultiple) {
+        return NULL;
+      }
+
+      $store   = $this->keyValueFactory->get(self::SEARCH_API_DB_KEY_VALUE_COLLECTION);
+      $flagged = [];
+      foreach ($store->getAll() as $indexId => $dbInfo) {
+        if (!\is_array($dbInfo) || !\is_array($dbInfo['field_tables'] ?? NULL)) {
+          continue;
+        }
+        $changed = FALSE;
+        foreach ($dbInfo['field_tables'] as $fieldId => $info) {
+          if (\is_array($info) && ($info['table'] ?? NULL) === $table && empty($info['multi-valued'])) {
+            $dbInfo['field_tables'][$fieldId]['multi-valued'] = TRUE;
+            $flagged[] = $indexId . '.' . $fieldId;
+            $changed   = TRUE;
+          }
+        }
+        if ($changed) {
+          $store->set($indexId, $dbInfo);
+        }
+      }
+    }
+    catch (\Throwable $e) {
+      $this->logger->warning('Could not mark @table as multi-valued: @msg', ['@table' => $table, '@msg' => $e->getMessage()]);
+      return ['op' => 'FLAG', 'target' => $table, 'rows' => 'failed', 'time' => $this->elapsed($t)];
+    }
+
+    if (!$flagged) {
+      return NULL;
+    }
+    $this->logger->notice('Marked @fields as multi-valued (aggregate target @table).', [
+      '@fields' => implode(', ', $flagged),
+      '@table'  => $table,
+    ]);
+    return ['op' => 'FLAG', 'target' => 'multi-valued: ' . implode(', ', $flagged), 'rows' => '-', 'time' => $this->elapsed($t)];
   }
 
   protected function elapsed(float $since): string {

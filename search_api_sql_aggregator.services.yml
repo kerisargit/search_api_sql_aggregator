@@ -6,7 +6,7 @@ services:
 
   search_api_sql_aggregator.manager:
     class: Drupal\search_api_sql_aggregator\Service\AggregationManager
-    arguments: ['@database', '@logger.factory', '@state', '@lock', '@entity_type.manager', '@search_api_sql_aggregator.validator', '@?search_api_sql_aggregator_unsafe.handler']
+    arguments: ['@database', '@logger.factory', '@state', '@lock', '@entity_type.manager', '@search_api_sql_aggregator.validator', '@?search_api_sql_aggregator_unsafe.handler', '@keyvalue']
   search_api_sql_aggregator.aggregation_task:
     class: Drupal\search_api_sql_aggregator\IntervalTask\AggregationTask
     arguments: ['@config.factory', '@state', '@search_api_sql_aggregator.manager', '@datetime.time']
