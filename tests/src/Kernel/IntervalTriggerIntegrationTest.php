@@ -146,6 +146,25 @@ class IntervalTriggerIntegrationTest extends KernelTestBase {
     $this->assertStringContainsString('still in progress', (string) $messenger->messagesByType('warning')[0]);
   }
 
+  /**
+   * After an import the page must be built from the imported configuration.
+   *
+   * A rebuild would keep the POSTed builder field, so the builder showed the
+   * previous blocks and the next Save overwrote the import with them.
+   */
+  public function testImportDoesNotRebuildWithThePostedBuilderValue(): void {
+    $imported = [['type' => 'null_reset', 'target_table' => 'search_api_db_y', 'target_column' => 'd']];
+    $form_state = (new FormState())
+      ->setUserInput(['json_config' => '[]'])
+      ->setValue('import_json_text', json_encode($imported));
+    $form = [];
+
+    SettingsForm::create($this->container)->importJsonHandler($form, $form_state);
+
+    $this->assertFalse($form_state->isRebuilding());
+    $this->assertSame($imported, json_decode($this->config('search_api_sql_aggregator.settings')->get('json_config'), TRUE));
+  }
+
   public function testRequirements(): void {
     \Drupal::moduleHandler()->loadInclude('search_api_sql_aggregator', 'install');
     $this->assertSame(OperationValidator::SQLITE_MINIMUM_VERSION, SEARCH_API_SQL_AGGREGATOR_SQLITE_MINIMUM_VERSION);

@@ -713,7 +713,6 @@ class SettingsForm extends ConfigFormBase {
         'Imported configuration failed validation and is in DRAFT mode — it will not run on cron.'
       ));
     }
-    $form_state->setRebuild(TRUE);
   }
 
   protected function computeNextRunLabel(): string {
